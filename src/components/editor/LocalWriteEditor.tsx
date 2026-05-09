@@ -25,6 +25,7 @@ import {
   Heading1,
   Heading2,
   Highlighter,
+  Image as ImageIcon,
   Italic,
   Languages,
   List,
@@ -32,6 +33,8 @@ import {
   ListOrdered,
   LoaderCircle,
   MessageSquare,
+  Mic,
+  MicOff,
   Moon,
   PanelRightClose,
   PanelRightOpen,
@@ -69,6 +72,9 @@ const LANGUAGE_MODEL_OPTIONS: LanguageModelCreateCoreOptions = {
   expectedOutputs: [{ type: "text", languages: ["en"] }],
 };
 
+const MULTIMODAL_SYSTEM_PROMPT =
+  "You are Draftside, a private on-device writing partner inside a minimal editor. Be concise, concrete, and useful. Never claim network access. Prefer the writer's voice over generic advice.";
+
 const CHAT_RESPONSE_CONSTRAINT: Record<string, unknown> = {
   type: "object",
   properties: {
@@ -94,10 +100,12 @@ const CHAT_RESPONSE_CONSTRAINT: Record<string, unknown> = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type AiStatus = Availability | "idle" | "checking" | "creating" | "unsupported" | "error";
-type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "express" | "chat" | null;
+type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "express" | "chat" | "transcribe" | null;
 type AiTab = "chat" | "tools";
 type ThemeMode = "light" | "dark";
 type ChatRole = "user" | "assistant";
+type RecordingTarget = "chat" | "editor";
+type MultimodalInputType = "audio" | "image";
 
 interface DraftUpdate {
   text: string;
@@ -111,6 +119,13 @@ interface ChatMessage {
   createdAt: number;
   pending?: boolean;
   draftUpdate?: DraftUpdate;
+}
+
+interface ChatImageAttachment {
+  id: string;
+  name: string;
+  file: File;
+  previewUrl: string;
 }
 
 interface Classification {
@@ -898,8 +913,17 @@ Latest user message:
 """${userPrompt}"""`;
 }
 
-async function promptChatModel(model: LanguageModel, prompt: string) {
-  const messages: LanguageModelPrompt = [{ role: "user", content: prompt }];
+async function promptChatModel(model: LanguageModel, prompt: string, images: ChatImageAttachment[] = []) {
+  const content: LanguageModelMessageContent[] | string = images.length
+    ? [
+        { type: "text", value: prompt },
+        ...images.map((image) => ({
+          type: "image" as const,
+          value: asModelContentValue(image.file),
+        })),
+      ]
+    : prompt;
+  const messages: LanguageModelPrompt = [{ role: "user", content }];
 
   try {
     return await model.prompt(messages, {
@@ -1027,6 +1051,17 @@ function formatModelInfoTime(value: number | undefined) {
   }).format(value);
 }
 
+function formatSaveTime(value: number | null | undefined) {
+  if (!value) return "not saved yet";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(value);
+}
+
 function mergeStreamChunk(previous: string, chunk: string) {
   if (!chunk) return previous;
   if (chunk.startsWith(previous)) return chunk;
@@ -1049,6 +1084,24 @@ async function readTextStream(stream: ReadableStream<string>, onText: (text: str
 
 function capabilityClass(enabled: boolean) {
   return enabled ? "capability-pill is-on" : "capability-pill";
+}
+
+function multimodalKey(inputTypes: MultimodalInputType[]) {
+  return [...new Set(inputTypes)].sort().join("+");
+}
+
+function buildMultimodalOptions(inputTypes: MultimodalInputType[]): LanguageModelCreateCoreOptions {
+  return {
+    expectedInputs: [
+      { type: "text", languages: ["en"] },
+      ...[...new Set(inputTypes)].sort().map((type) => ({ type }) as LanguageModelExpected),
+    ],
+    expectedOutputs: [{ type: "text", languages: ["en"] }],
+  };
+}
+
+function asModelContentValue(value: Blob): LanguageModelMessageValue {
+  return value as unknown as LanguageModelMessageValue;
 }
 
 async function getDraftsideCacheStats() {
@@ -1090,6 +1143,7 @@ export default function LocalWriteEditor() {
   const [sessions, setSessions] = useState<WriteSession[]>([]);
   const [activeSession, setActiveSession] = useState<WriteSession | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
       const stored = localStorage.getItem(THEME_KEY);
@@ -1133,6 +1187,8 @@ export default function LocalWriteEditor() {
   const [completionTick, setCompletionTick] = useState(0);
   const [ghostCompletionText, setGhostCompletionText] = useState("");
   const [chatInput, setChatInput] = useState("");
+  const [chatImages, setChatImages] = useState<ChatImageAttachment[]>([]);
+  const [recordingTarget, setRecordingTarget] = useState<RecordingTarget | null>(null);
   const [chatError, setChatError] = useState("");
 
   const saveTimerRef = useRef<number | null>(null);
@@ -1141,6 +1197,8 @@ export default function LocalWriteEditor() {
   const activeSessionRef = useRef<WriteSession | null>(null);
   const languageModelRef = useRef<LanguageModel | null>(null);
   const creatingModelRef = useRef<Promise<LanguageModel> | null>(null);
+  const multimodalLanguageModelRef = useRef(new Map<string, LanguageModel>());
+  const creatingMultimodalModelRef = useRef(new Map<string, Promise<LanguageModel>>());
   const autoPrepareStartedRef = useRef(false);
   const skipUpdateRef = useRef(false);
   const postMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1148,6 +1206,11 @@ export default function LocalWriteEditor() {
   const expressionRequestRef = useRef(0);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const chatImageInputRef = useRef<HTMLInputElement | null>(null);
+  const chatImagesRef = useRef<ChatImageAttachment[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
 
   const extensions = useMemo(
     () => [
@@ -1204,6 +1267,7 @@ export default function LocalWriteEditor() {
     try {
       await putSession(next);
       setSaveState("saved");
+      setLastSavedAt(Date.now());
     } catch {
       setSaveState("error");
     }
@@ -1233,7 +1297,13 @@ export default function LocalWriteEditor() {
     activeSessionRef.current = next;
     setActiveSession(next);
     setSessions((previous) => [next, ...previous.filter((session) => session.id !== next.id)].sort((a, b) => b.updatedAt - a.updatedAt));
-    void putSession(next).catch(() => setSaveState("error"));
+    setSaveState("saving");
+    void putSession(next)
+      .then(() => {
+        setSaveState("saved");
+        setLastSavedAt(Date.now());
+      })
+      .catch(() => setSaveState("error"));
   }, []);
 
   const editor = useEditor({
@@ -1328,6 +1398,7 @@ export default function LocalWriteEditor() {
         setSessions(nextSessions);
         setActiveSession(selected);
         activeSessionRef.current = selected;
+        setLastSavedAt(selected.updatedAt);
         localStorage.setItem(ACTIVE_SESSION_KEY, selected.id);
       } catch {
         const blank = createBlankSession();
@@ -1335,6 +1406,7 @@ export default function LocalWriteEditor() {
         setSessions([blank]);
         setActiveSession(blank);
         activeSessionRef.current = blank;
+        setLastSavedAt(null);
         setSaveState("error");
       }
     }
@@ -1381,6 +1453,10 @@ export default function LocalWriteEditor() {
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
   }, [chatInput]);
+
+  useEffect(() => {
+    chatImagesRef.current = chatImages;
+  }, [chatImages]);
 
   useEffect(() => {
     if (!aiSidebarOpen || aiTab !== "chat") return;
@@ -1489,6 +1565,10 @@ export default function LocalWriteEditor() {
       if (completionTimerRef.current) window.clearTimeout(completionTimerRef.current);
       completionRequestRef.current += 1;
       languageModelRef.current?.destroy();
+      multimodalLanguageModelRef.current.forEach((session) => session.destroy());
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      chatImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     };
   }, []);
 
@@ -1542,7 +1622,7 @@ export default function LocalWriteEditor() {
   const currentClassification = activeSession?.classification;
   const chatMessages = activeSession?.chatMessages ?? [];
   const chatPending = aiAction === "chat";
-  const canSendChat = Boolean(chatInput.trim() && capabilities.prompt && activeSession && aiAction === null);
+  const canSendChat = Boolean((chatInput.trim() || chatImages.length) && capabilities.prompt && activeSession && aiAction === null && !recordingTarget);
   const modelContextRatio =
     typeof modelInfo.contextUsage === "number" && typeof modelInfo.contextWindow === "number" && modelInfo.contextWindow > 0
       ? modelInfo.contextUsage / modelInfo.contextWindow
@@ -1551,6 +1631,8 @@ export default function LocalWriteEditor() {
     typeof offlineInfo.storageUsage === "number" && typeof offlineInfo.storageQuota === "number" && offlineInfo.storageQuota > 0
       ? offlineInfo.storageUsage / offlineInfo.storageQuota
       : null;
+  const modelUnsupported = aiStatus === "unsupported" || modelInfo.availability === "unsupported";
+  const modelUnavailable = aiStatus === "unavailable" || modelInfo.availability === "unavailable";
 
   const refreshModelInfo = useCallback(async () => {
     if (!("LanguageModel" in globalThis)) {
@@ -1686,8 +1768,7 @@ export default function LocalWriteEditor() {
           initialPrompts: [
             {
               role: "system",
-              content:
-                "You are Draftside, a private on-device writing partner inside a minimal editor. Be concise, concrete, and useful. Never claim network access. Prefer the writer's voice over generic advice.",
+              content: MULTIMODAL_SYSTEM_PROMPT,
             },
           ],
           monitor(monitor) {
@@ -1739,6 +1820,63 @@ export default function LocalWriteEditor() {
     }
   }, []);
 
+  const ensureMultimodalLanguageModel = useCallback(async (inputTypes: MultimodalInputType[]) => {
+    const key = multimodalKey(inputTypes);
+    const existing = multimodalLanguageModelRef.current.get(key);
+    if (existing) return existing;
+
+    const pending = creatingMultimodalModelRef.current.get(key);
+    if (pending) return pending;
+
+    if (!("LanguageModel" in globalThis)) {
+      throw new Error("Chrome built-in AI is not available in this browser.");
+    }
+
+    const options = buildMultimodalOptions(inputTypes);
+    const promise = (async () => {
+      setAiProgress(null);
+
+      const availability = await LanguageModel.availability(options);
+      if (availability === "unavailable") {
+        throw new Error("Gemini Nano multimodal input is unavailable on this device or Chrome profile.");
+      }
+
+      const session = await LanguageModel.create({
+        ...options,
+        initialPrompts: [
+          {
+            role: "system",
+            content: MULTIMODAL_SYSTEM_PROMPT,
+          },
+        ],
+        monitor(monitor) {
+          monitor.addEventListener("downloadprogress", (event) => {
+            const progress =
+              event.lengthComputable && event.total > 0
+                ? event.loaded / event.total
+                : event.loaded <= 1
+                  ? event.loaded
+                  : 0;
+            setAiProgress(Math.max(0, Math.min(1, progress)));
+          });
+        },
+      });
+
+      multimodalLanguageModelRef.current.set(key, session);
+      setAiProgress(null);
+      return session;
+    })();
+
+    creatingMultimodalModelRef.current.set(key, promise);
+
+    try {
+      return await promise;
+    } finally {
+      creatingMultimodalModelRef.current.delete(key);
+      setAiProgress(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (autoPrepareStartedRef.current || !("LanguageModel" in globalThis)) return;
 
@@ -1778,16 +1916,181 @@ export default function LocalWriteEditor() {
     [editor, scheduleSave],
   );
 
+  const transcribeAudio = useCallback(
+    async (audio: Blob) => {
+      const model = await ensureMultimodalLanguageModel(["audio"]);
+      const result = await model.prompt([
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              value:
+                "Transcribe the attached speech to plain text. Return only the spoken words. Do not summarize, explain, add punctuation beyond natural sentence punctuation, or wrap the result in quotes.",
+            },
+            { type: "audio", value: asModelContentValue(audio) },
+          ],
+        },
+      ]);
+
+      return stripJsonFences(result).trim();
+    },
+    [ensureMultimodalLanguageModel],
+  );
+
+  const handleRecordedAudio = useCallback(
+    async (target: RecordingTarget, audio: Blob) => {
+      if (!audio.size) {
+        const message = "No speech was captured.";
+        if (target === "chat") setChatError(message);
+        else setAiError(message);
+        return;
+      }
+
+      setAiAction("transcribe");
+      setChatError("");
+      setAiError("");
+
+      try {
+        const transcript = await transcribeAudio(audio);
+        if (!transcript) throw new Error("Chrome returned an empty transcript.");
+
+        if (target === "chat") {
+          setAiSidebarOpen(true);
+          setAiTab("chat");
+          setChatInput((current) => (current.trim() ? `${current.trim()} ${transcript}` : transcript));
+          window.setTimeout(() => chatInputRef.current?.focus(), 0);
+        } else {
+          if (!editor) throw new Error("The editor is not ready.");
+          clearEditorGhostCompletion(editor);
+          setGhostCompletionText("");
+          completionRequestRef.current += 1;
+          editor.chain().focus().insertContent(transcript).run();
+          scheduleSave(editor);
+        }
+      } catch (error) {
+        const details = error instanceof Error ? error.message : "Speech transcription failed.";
+        const message = `${details} Chrome local audio input requires desktop Chrome with Gemini Nano multimodal support.`;
+        if (target === "chat") setChatError(message);
+        else setAiError(message);
+      } finally {
+        setAiAction(null);
+      }
+    },
+    [editor, scheduleSave, transcribeAudio],
+  );
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+  }, []);
+
+  const startRecording = useCallback(
+    async (target: RecordingTarget) => {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+        const message = "Microphone recording is not available in this browser.";
+        if (target === "chat") setChatError(message);
+        else setAiError(message);
+        return;
+      }
+
+      if (recordingTarget) {
+        if (recordingTarget === target) stopRecording();
+        return;
+      }
+
+      setChatError("");
+      setAiError("");
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+
+        mediaStreamRef.current = stream;
+        mediaRecorderRef.current = recorder;
+        mediaChunksRef.current = [];
+
+        recorder.addEventListener("dataavailable", (event) => {
+          if (event.data.size) mediaChunksRef.current.push(event.data);
+        });
+
+        recorder.addEventListener("stop", () => {
+          const chunks = mediaChunksRef.current;
+          const type = recorder.mimeType || "audio/webm";
+          const audio = new Blob(chunks, { type });
+
+          mediaChunksRef.current = [];
+          mediaRecorderRef.current = null;
+          mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+          setRecordingTarget(null);
+
+          void handleRecordedAudio(target, audio);
+        });
+
+        recorder.start();
+        setRecordingTarget(target);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not access the microphone.";
+        if (target === "chat") setChatError(message);
+        else setAiError(message);
+      }
+    },
+    [handleRecordedAudio, recordingTarget, stopRecording],
+  );
+
+  const toggleRecording = useCallback(
+    async (target: RecordingTarget) => {
+      if (recordingTarget === target) {
+        stopRecording();
+        return;
+      }
+
+      await startRecording(target);
+    },
+    [recordingTarget, startRecording, stopRecording],
+  );
+
+  const handleChatImageSelection = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    if (!files.length) return;
+
+    setChatImages((current) => {
+      const remainingSlots = Math.max(0, 4 - current.length);
+      const next = files.slice(0, remainingSlots).map((file) => ({
+        id: crypto.randomUUID(),
+        name: file.name || "image",
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      return [...current, ...next];
+    });
+
+    event.target.value = "";
+  }, []);
+
+  const removeChatImage = useCallback((id: string) => {
+    setChatImages((current) => {
+      const image = current.find((item) => item.id === id);
+      if (image) URL.revokeObjectURL(image.previewUrl);
+      return current.filter((item) => item.id !== id);
+    });
+  }, []);
+
   const sendChatMessage = useCallback(async () => {
     const prompt = chatInput.trim();
     const session = activeSessionRef.current;
-    if (!prompt || !session || aiAction !== null || !capabilities.prompt) return;
+    const images = chatImages;
+    if ((!prompt && !images.length) || !session || aiAction !== null || recordingTarget || !capabilities.prompt) return;
 
     const history = (session.chatMessages ?? []).filter((message) => !message.pending);
+    const attachmentText = images.map((image) => `[image: ${image.name}]`).join("\n");
+    const visiblePrompt = [prompt, attachmentText].filter(Boolean).join("\n");
+    const effectivePrompt = prompt || "Use the attached image or images as context and help me reason about them.";
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: prompt,
+      content: visiblePrompt,
       createdAt: Date.now(),
     };
     const assistantMessage: ChatMessage = {
@@ -1799,18 +2102,20 @@ export default function LocalWriteEditor() {
     };
     const optimisticMessages = [...history, userMessage, assistantMessage];
     const draftText = truncateForModel(editor?.getText().trim() ?? session.plainText.trim(), 5200);
-    const modelPrompt = buildChatPrompt(prompt, draftText, history);
+    const modelPrompt = buildChatPrompt(effectivePrompt, draftText, history);
 
     setAiSidebarOpen(true);
     setAiTab("chat");
     setChatInput("");
+    setChatImages([]);
+    images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setChatError("");
     persistChatMessages(optimisticMessages);
     setAiAction("chat");
 
     try {
-      const model = await ensureLanguageModel();
-      const raw = await promptChatModel(model, modelPrompt);
+      const model = images.length ? await ensureMultimodalLanguageModel(["image"]) : await ensureLanguageModel();
+      const raw = await promptChatModel(model, modelPrompt, images);
       const parsed = parseChatResponse(raw);
       const appliedUpdate = parsed.draftUpdate && activeSessionRef.current?.id === session.id ? parsed.draftUpdate : null;
 
@@ -1850,7 +2155,18 @@ export default function LocalWriteEditor() {
     } finally {
       setAiAction(null);
     }
-  }, [aiAction, applyDraftUpdate, capabilities.prompt, chatInput, editor, ensureLanguageModel, persistChatMessages]);
+  }, [
+    aiAction,
+    applyDraftUpdate,
+    capabilities.prompt,
+    chatImages,
+    chatInput,
+    editor,
+    ensureLanguageModel,
+    ensureMultimodalLanguageModel,
+    persistChatMessages,
+    recordingTarget,
+  ]);
 
   const handleChatComposerKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -2007,6 +2323,8 @@ export default function LocalWriteEditor() {
         setActiveSession(next);
         setSessions((previous) => [next, ...previous.filter((session) => session.id !== next.id)].sort((a, b) => b.updatedAt - a.updatedAt));
         await putSession(next);
+        setSaveState("saved");
+        setLastSavedAt(Date.now());
       }
 
       setAiOutput(classification.nextMove);
@@ -2232,6 +2550,8 @@ export default function LocalWriteEditor() {
     setSessions((previous) => [blank, ...previous]);
     setActiveSession(blank);
     activeSessionRef.current = blank;
+    setLastSavedAt(blank.updatedAt);
+    setSaveState("saved");
     setAiOutput("");
     setAiError("");
     setChatError("");
@@ -2240,6 +2560,8 @@ export default function LocalWriteEditor() {
   const selectSession = useCallback((session: WriteSession) => {
     setActiveSession(session);
     activeSessionRef.current = session;
+    setLastSavedAt(session.updatedAt);
+    setSaveState("idle");
     setAiOutput("");
     setAiError("");
     setChatError("");
@@ -2256,6 +2578,8 @@ export default function LocalWriteEditor() {
       setSessions(remaining);
       setActiveSession(remaining[0]);
       activeSessionRef.current = remaining[0];
+      setLastSavedAt(remaining[0].updatedAt);
+      setSaveState("idle");
       setChatError("");
       return;
     }
@@ -2265,6 +2589,8 @@ export default function LocalWriteEditor() {
     setSessions([blank]);
     setActiveSession(blank);
     activeSessionRef.current = blank;
+    setLastSavedAt(blank.updatedAt);
+    setSaveState("saved");
     setChatError("");
   }, [activeSession, sessions]);
 
@@ -2438,76 +2764,165 @@ export default function LocalWriteEditor() {
                 <span>{modelInfo.loading ? "checking" : statusLabel(modelInfo.availability ?? aiStatus)}</span>
               </span>
 
-              <span className="model-popover-grid">
-                <span>
-                  <strong>Runtime</strong>
-                  <em>LanguageModel API</em>
-                </span>
-                <span>
-                  <strong>Exact model</strong>
-                  <em>not exposed by Chrome</em>
-                </span>
-                <span>
-                  <strong>Availability</strong>
-                  <em>{modelInfo.availability ?? aiStatus}</em>
-                </span>
-                <span>
-                  <strong>Session</strong>
-                  <em>{languageModelRef.current ? "active" : creatingModelRef.current ? "starting" : "not started"}</em>
-                </span>
-                <span>
-                  <strong>Context used</strong>
-                  <em>
-                    {formatNumber(modelInfo.contextUsage)} / {formatNumber(modelInfo.contextWindow)} ({formatPercent(modelContextRatio)})
-                  </em>
-                </span>
-                <span>
-                  <strong>Default topK</strong>
-                  <em>{formatNumber(modelInfo.params?.defaultTopK)}</em>
-                </span>
-                <span>
-                  <strong>Max topK</strong>
-                  <em>{formatNumber(modelInfo.params?.maxTopK)}</em>
-                </span>
-                <span>
-                  <strong>Default temp</strong>
-                  <em>{formatNumber(modelInfo.params?.defaultTemperature)}</em>
-                </span>
-                <span>
-                  <strong>Max temp</strong>
-                  <em>{formatNumber(modelInfo.params?.maxTemperature)}</em>
-                </span>
-                <span>
-                  <strong>Active topK</strong>
-                  <em>{formatNumber(modelInfo.topK)}</em>
-                </span>
-                <span>
-                  <strong>Active temp</strong>
-                  <em>{formatNumber(modelInfo.temperature)}</em>
-                </span>
-                <span>
-                  <strong>Download</strong>
-                  <em>{aiProgress === null ? "idle" : formatPercent(aiProgress)}</em>
-                </span>
-              </span>
+              {modelUnsupported ? (
+                <>
+                  <span className="model-help-copy">
+                    Local AI in Draftside uses Chrome's built-in Gemini Nano through the browser LanguageModel API. Safari does not expose that API, so the editor and offline drafts work here, but AI tools are disabled.
+                  </span>
+                  <span className="model-help-steps">
+                    <span>
+                      <strong>1</strong>
+                      <em>Open this page in desktop Chrome.</em>
+                    </span>
+                    <span>
+                      <strong>2</strong>
+                      <em>Use a Chrome profile where built-in AI / Gemini Nano is available.</em>
+                    </span>
+                    <span>
+                      <strong>3</strong>
+                      <em>Leave the tab open while the badge changes from downloading to ready.</em>
+                    </span>
+                  </span>
+                  <span className="model-popover-note">
+                    Once Chrome downloads the model, Draftside can run completions, chat, rewrites, classification, and alternate phrasing locally.
+                  </span>
+                </>
+              ) : modelUnavailable ? (
+                <>
+                  <span className="model-help-copy">
+                    Chrome exposes the local AI API, but Gemini Nano is not available on this device or Chrome profile yet.
+                  </span>
+                  <span className="model-help-steps">
+                    <span>
+                      <strong>1</strong>
+                      <em>Update Chrome and restart the browser.</em>
+                    </span>
+                    <span>
+                      <strong>2</strong>
+                      <em>Try a Chrome build/profile with built-in AI enabled.</em>
+                    </span>
+                    <span>
+                      <strong>3</strong>
+                      <em>Keep Draftside open while Chrome prepares the local model.</em>
+                    </span>
+                  </span>
+                  <span className="model-popover-note">Your editor, drafts, and offline cache still work without the model.</span>
+                </>
+              ) : (
+                <>
+                  <span className="model-popover-grid">
+                    <span>
+                      <strong>Runtime</strong>
+                      <em>LanguageModel API</em>
+                    </span>
+                    <span>
+                      <strong>Exact model</strong>
+                      <em>not exposed by Chrome</em>
+                    </span>
+                    <span>
+                      <strong>Availability</strong>
+                      <em>{modelInfo.availability ?? aiStatus}</em>
+                    </span>
+                    <span>
+                      <strong>Session</strong>
+                      <em>{languageModelRef.current ? "active" : creatingModelRef.current ? "starting" : "not started"}</em>
+                    </span>
+                    <span>
+                      <strong>Context used</strong>
+                      <em>
+                        {formatNumber(modelInfo.contextUsage)} / {formatNumber(modelInfo.contextWindow)} ({formatPercent(modelContextRatio)})
+                      </em>
+                    </span>
+                    <span>
+                      <strong>Default topK</strong>
+                      <em>{formatNumber(modelInfo.params?.defaultTopK)}</em>
+                    </span>
+                    <span>
+                      <strong>Max topK</strong>
+                      <em>{formatNumber(modelInfo.params?.maxTopK)}</em>
+                    </span>
+                    <span>
+                      <strong>Default temp</strong>
+                      <em>{formatNumber(modelInfo.params?.defaultTemperature)}</em>
+                    </span>
+                    <span>
+                      <strong>Max temp</strong>
+                      <em>{formatNumber(modelInfo.params?.maxTemperature)}</em>
+                    </span>
+                    <span>
+                      <strong>Active topK</strong>
+                      <em>{formatNumber(modelInfo.topK)}</em>
+                    </span>
+                    <span>
+                      <strong>Active temp</strong>
+                      <em>{formatNumber(modelInfo.temperature)}</em>
+                    </span>
+                    <span>
+                      <strong>Download</strong>
+                      <em>{aiProgress === null ? "idle" : formatPercent(aiProgress)}</em>
+                    </span>
+                  </span>
 
-              <span className="model-popover-capabilities">
-                <span className={capabilityClass(capabilities.prompt)}>prompt</span>
-                <span className={capabilityClass(capabilities.rewriter)}>rewrite</span>
-                <span className={capabilityClass(capabilities.writer)}>write</span>
-                <span className={capabilityClass(capabilities.detector)}>language</span>
-              </span>
+                  <span className="model-popover-capabilities">
+                    <span className={capabilityClass(capabilities.prompt)}>prompt</span>
+                    <span className={capabilityClass(capabilities.rewriter)}>rewrite</span>
+                    <span className={capabilityClass(capabilities.writer)}>write</span>
+                    <span className={capabilityClass(capabilities.detector)}>language</span>
+                  </span>
 
-              <span className="model-popover-note">
-                Inference stays on-device. Draftside requests English text in and out; storage is {storagePersisted ? "persistent" : "browser-managed"}.
-                {modelInfo.paramsError ? ` ${modelInfo.paramsError}` : ""}
-              </span>
+                  <span className="model-popover-note">
+                    Inference stays on-device. Draftside requests English text in and out; storage is {storagePersisted ? "persistent" : "browser-managed"}.
+                    {modelInfo.paramsError ? ` ${modelInfo.paramsError}` : ""}
+                  </span>
+                </>
+              )}
               <span className="model-popover-foot">checked {formatModelInfoTime(modelInfo.checkedAt)}</span>
             </span>
           </span>
-          <span className="connectivity">
-            <Save size={14} />
-            {saveState}
+          <span className="save-status-wrap">
+            <span className={`connectivity save-status ${saveState}`} tabIndex={0} aria-describedby="save-status-popover">
+              <Save size={14} />
+              {saveState}
+            </span>
+            <span id="save-status-popover" className="save-popover" role="tooltip">
+              <span className="model-popover-title">
+                <span>Local draft save</span>
+                <span>{saveState}</span>
+              </span>
+
+              <span className="model-popover-grid">
+                <span>
+                  <strong>Last saved</strong>
+                  <em>{formatSaveTime(lastSavedAt)}</em>
+                </span>
+                <span>
+                  <strong>Last change</strong>
+                  <em>{formatSaveTime(activeSession?.updatedAt)}</em>
+                </span>
+                <span>
+                  <strong>Created</strong>
+                  <em>{formatSaveTime(activeSession?.createdAt)}</em>
+                </span>
+                <span>
+                  <strong>Current draft</strong>
+                  <em>
+                    {wordCount} words, {charCount} chars
+                  </em>
+                </span>
+                <span>
+                  <strong>Storage</strong>
+                  <em>{storagePersisted === null ? "checking" : storagePersisted ? "persistent IndexedDB" : "browser-managed IndexedDB"}</em>
+                </span>
+                <span>
+                  <strong>Session</strong>
+                  <em>{activeSession?.title || "Untitled"}</em>
+                </span>
+              </span>
+
+              <span className="model-popover-note">
+                Draftside autosaves the active document to local IndexedDB about 420ms after edits. Chat history and AI classifications are stored with the same draft.
+              </span>
+            </span>
           </span>
         </div>
       </aside>
@@ -2564,6 +2979,16 @@ export default function LocalWriteEditor() {
 
           <div className="toolbar-spacer" />
 
+          <button
+            type="button"
+            className={recordingTarget === "editor" ? "icon-button is-active is-recording" : "icon-button"}
+            onClick={() => void toggleRecording("editor")}
+            disabled={!capabilities.prompt || aiAction !== null || (recordingTarget !== null && recordingTarget !== "editor")}
+            aria-label={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
+            title={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
+          >
+            {recordingTarget === "editor" ? <MicOff size={17} /> : <Mic size={17} />}
+          </button>
           <button
             type="button"
             className="icon-button"
@@ -2764,19 +3189,72 @@ export default function LocalWriteEditor() {
                 void sendChatMessage();
               }}
             >
-              <textarea
-                ref={chatInputRef}
-                value={chatInput}
-                onChange={(event) => setChatInput(event.target.value)}
-                onKeyDown={handleChatComposerKeyDown}
-                disabled={!capabilities.prompt || aiAction !== null || !activeSession}
-                rows={1}
-                placeholder={capabilities.prompt ? "Ask anything..." : "Chrome built-in AI is unavailable"}
-                aria-label="Chat with Draftside"
-              />
-              <button type="submit" aria-label="Send message" disabled={!canSendChat}>
-                {chatPending ? <LoaderCircle className="spin" size={15} /> : <ArrowUp size={15} />}
-              </button>
+              {chatImages.length ? (
+                <div className="chat-attachments" aria-label="Attached images">
+                  {chatImages.map((image) => (
+                    <span key={image.id} className="chat-attachment">
+                      <img src={image.previewUrl} alt="" />
+                      <span>{image.name}</span>
+                      <button type="button" onClick={() => removeChatImage(image.id)} aria-label={`Remove ${image.name}`} title="Remove image">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="chat-input-row">
+                <input
+                  ref={chatImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="visually-hidden"
+                  onChange={handleChatImageSelection}
+                  aria-label="Attach images"
+                />
+                <button
+                  type="button"
+                  className="chat-tool-button"
+                  onClick={() => chatImageInputRef.current?.click()}
+                  disabled={!capabilities.prompt || aiAction !== null || !activeSession || chatImages.length >= 4}
+                  aria-label="Attach image"
+                  title="Attach image"
+                >
+                  <ImageIcon size={15} />
+                </button>
+                <button
+                  type="button"
+                  className={recordingTarget === "chat" ? "chat-tool-button is-recording" : "chat-tool-button"}
+                  onClick={() => void toggleRecording("chat")}
+                  disabled={!capabilities.prompt || aiAction !== null || !activeSession || (recordingTarget !== null && recordingTarget !== "chat")}
+                  aria-label={recordingTarget === "chat" ? "Stop voice input" : "Voice input"}
+                  title={recordingTarget === "chat" ? "Stop voice input" : "Voice input"}
+                >
+                  {recordingTarget === "chat" ? <MicOff size={15} /> : <Mic size={15} />}
+                </button>
+                <textarea
+                  ref={chatInputRef}
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  onKeyDown={handleChatComposerKeyDown}
+                  disabled={!capabilities.prompt || aiAction !== null || !activeSession}
+                  rows={1}
+                  placeholder={
+                    recordingTarget === "chat"
+                      ? "Listening..."
+                      : aiAction === "transcribe"
+                        ? "Transcribing locally..."
+                        : capabilities.prompt
+                          ? "Ask anything..."
+                          : "Chrome built-in AI is unavailable"
+                  }
+                  aria-label="Chat with Draftside"
+                />
+                <button type="submit" className="chat-send-button" aria-label="Send message" disabled={!canSendChat}>
+                  {chatPending ? <LoaderCircle className="spin" size={15} /> : <ArrowUp size={15} />}
+                </button>
+              </div>
             </form>
           </div>
         ) : (

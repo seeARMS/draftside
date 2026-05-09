@@ -49,14 +49,16 @@ const structuredData = JSON.stringify([
       url: xUrl,
     },
     featureList: [
-      "Full-screen TipTap writing editor",
-      "Offline draft persistence",
-      "Chrome built-in Gemini Nano assistance",
-      "Inline alternate wording suggestions",
+      "Open source",
+      "Runs 100% offline in the browser",
+      "On-device Chrome built-in Gemini Nano",
       "Ghost sentence completions accepted with Tab",
-      "Installable progressive web app",
+      "Inline alternate wording suggestions",
+      "Draft classification: form, intent, stance, friction, next move",
+      "Persistent local drafts in browser storage",
+      "Installable as a progressive web app",
     ],
-    keywords: "offline writing editor, local AI writing, Gemini Nano, TipTap editor, private drafting app",
+    keywords: "open source writing editor, offline AI writing, local-first writing app, Gemini Nano writing tool, Chrome built-in AI editor, on-device AI writing, private drafting tool",
   },
 ]);
 ---
@@ -179,96 +181,167 @@ const structuredData = JSON.stringify([
 
       .product-field {
         position: absolute;
-        inset: 5.75rem max(-7vw, -7rem) auto auto;
-        width: min(62rem, 74vw);
-        height: min(35rem, 56svh);
+        inset: 5.75rem max(-3vw, -3rem) auto auto;
+        width: min(58rem, 68vw);
+        height: min(36rem, 60svh);
         border: 1px solid rgba(212, 212, 216, 0.78);
-        border-radius: 1.35rem;
-        background: rgba(255, 255, 255, 0.82);
+        border-radius: 0.85rem;
+        background: rgba(255, 255, 255, 0.96);
         box-shadow:
-          0 1px 2px rgba(15, 23, 42, 0.06),
-          0 28px 80px rgba(15, 23, 42, 0.12);
+          0 1px 2px rgba(15, 23, 42, 0.05),
+          0 30px 80px rgba(15, 23, 42, 0.10);
         overflow: hidden;
-        transform: rotate(-1deg);
       }
 
       .dark .product-field {
         border-color: rgba(63, 63, 70, 0.9);
-        background: rgba(24, 24, 27, 0.78);
+        background: rgba(24, 24, 27, 0.92);
         box-shadow:
           0 1px 2px rgba(0, 0, 0, 0.32),
           0 30px 90px rgba(0, 0, 0, 0.42);
       }
 
-      .product-field::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background:
-          linear-gradient(90deg, rgba(244, 244, 245, 0.78) 0 15rem, transparent 15rem),
-          linear-gradient(90deg, transparent calc(100% - 18rem), rgba(244, 244, 245, 0.78) calc(100% - 18rem));
+      .editor-chrome {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        height: 2.35rem;
+        padding: 0 1rem;
+        border-bottom: 1px solid rgba(228, 228, 231, 0.78);
+        font-family: var(--font-geist-mono);
+        font-size: 0.7rem;
+        color: rgba(113, 113, 122, 0.95);
       }
 
-      .dark .product-field::before {
-        background:
-          linear-gradient(90deg, rgba(39, 39, 42, 0.84) 0 15rem, transparent 15rem),
-          linear-gradient(90deg, transparent calc(100% - 18rem), rgba(39, 39, 42, 0.84) calc(100% - 18rem));
+      .dark .editor-chrome {
+        border-color: rgba(63, 63, 70, 0.9);
+        color: rgba(161, 161, 170, 0.92);
       }
 
-      .draft-lines {
-        position: absolute;
-        left: 19rem;
-        top: 5.5rem;
-        width: min(32rem, 44%);
-        color: rgba(24, 24, 27, 0.9);
-        font-size: clamp(1.05rem, 1.5vw, 1.5rem);
-        line-height: 1.75;
+      .editor-dot {
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
       }
 
-      .dark .draft-lines {
+      .editor-filename {
+        flex: 1;
+        letter-spacing: -0.005em;
+      }
+
+      .editor-badge {
+        border-radius: 999px;
+        padding: 0.18rem 0.6rem;
+        background: rgba(244, 244, 245, 0.95);
+        color: rgba(82, 82, 91, 0.95);
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .dark .editor-badge {
+        background: rgba(63, 63, 70, 0.7);
+        color: rgba(212, 212, 216, 0.92);
+      }
+
+      .draft-body {
+        padding: 3rem 3.5rem 2rem;
+        max-width: 38rem;
+        color: rgba(24, 24, 27, 0.92);
+        font-size: clamp(1rem, 1.3vw, 1.2rem);
+        line-height: 1.85;
+      }
+
+      .dark .draft-body {
         color: rgba(244, 244, 245, 0.92);
       }
 
-      .draft-lines strong {
+      .draft-body strong {
         display: block;
-        margin-bottom: 1.2rem;
-        font-size: 1.25em;
+        margin-bottom: 1.35rem;
+        font-size: 1.4em;
         font-weight: 600;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.022em;
       }
 
       .ghost-text {
-        color: rgba(113, 113, 122, 0.72);
+        color: rgba(113, 113, 122, 0.6);
       }
 
-      .side-panel {
+      .dark .ghost-text {
+        color: rgba(161, 161, 170, 0.55);
+      }
+
+      .ghost-key {
+        display: inline-block;
+        margin-left: 0.45em;
+        padding: 0.05em 0.45em;
+        border: 1px solid rgba(212, 212, 216, 0.85);
+        border-bottom-width: 2px;
+        border-radius: 0.3rem;
+        background: rgba(244, 244, 245, 0.9);
+        color: rgba(82, 82, 91, 0.92);
+        font-family: var(--font-geist-mono);
+        font-size: 0.62em;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        vertical-align: 0.18em;
+        line-height: 1.4;
+      }
+
+      .dark .ghost-key {
+        border-color: rgba(82, 82, 91, 0.9);
+        background: rgba(39, 39, 42, 0.95);
+        color: rgba(212, 212, 216, 0.85);
+      }
+
+      .classification {
         position: absolute;
-        right: 1rem;
-        top: 1rem;
+        right: 1.5rem;
+        bottom: 1.5rem;
         width: 15.5rem;
-        display: grid;
-        gap: 0.65rem;
-        padding: 0.75rem;
-        border-left: 1px solid rgba(228, 228, 231, 0.8);
-        color: rgba(82, 82, 91, 0.95);
-        font-size: 0.8rem;
+        padding: 0.95rem 1.1rem;
+        border: 1px solid rgba(228, 228, 231, 0.85);
+        border-radius: 0.6rem;
+        background: rgba(250, 250, 251, 0.94);
+        font-family: var(--font-geist-mono);
+        backdrop-filter: blur(6px);
       }
 
-      .dark .side-panel {
+      .dark .classification {
         border-color: rgba(63, 63, 70, 0.92);
-        color: rgba(212, 212, 216, 0.88);
+        background: rgba(39, 39, 42, 0.82);
       }
 
-      .side-panel span {
-        display: inline-flex;
-        width: fit-content;
-        border-radius: 0.45rem;
-        background: rgba(244, 244, 245, 0.96);
-        padding: 0.28rem 0.5rem;
+      .classification dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.5rem 1rem;
+        margin: 0;
       }
 
-      .dark .side-panel span {
-        background: rgba(63, 63, 70, 0.82);
+      .classification dt {
+        color: rgba(113, 113, 122, 0.95);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.6rem;
+      }
+
+      .dark .classification dt {
+        color: rgba(161, 161, 170, 0.85);
+      }
+
+      .classification dd {
+        margin: 0;
+        color: rgba(39, 39, 46, 0.94);
+        font-size: 0.7rem;
+        letter-spacing: -0.005em;
+      }
+
+      .dark .classification dd {
+        color: rgba(228, 228, 231, 0.92);
       }
 
       .feature-grid > div {
@@ -285,26 +358,25 @@ const structuredData = JSON.stringify([
           position: relative;
           inset: auto;
           width: 100%;
-          height: 24rem;
+          height: auto;
           margin-top: 2.5rem;
-          transform: none;
         }
 
-        .product-field::before {
-          background: linear-gradient(90deg, rgba(244, 244, 245, 0.78) 0 9rem, transparent 9rem);
+        .draft-body {
+          padding: 2rem 1.75rem 1.5rem;
+          max-width: 100%;
+          font-size: 1rem;
         }
 
-        .dark .product-field::before {
-          background: linear-gradient(90deg, rgba(39, 39, 42, 0.84) 0 9rem, transparent 9rem);
+        .classification {
+          position: relative;
+          right: auto;
+          bottom: auto;
+          width: auto;
+          margin: 0 1.5rem 1.5rem;
         }
 
-        .draft-lines {
-          left: 2rem;
-          top: 4rem;
-          width: calc(100% - 4rem);
-        }
-
-        .side-panel {
+        .editor-badge {
           display: none;
         }
       }
@@ -320,6 +392,7 @@ const structuredData = JSON.stringify([
           </a>
           <div class="flex items-center gap-5 text-zinc-500 dark:text-zinc-400">
             <a href="/editor" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Editor</a>
+            <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">GitHub</a>
             <button
               type="button"
               onclick="toggleDarkMode()"
@@ -341,36 +414,42 @@ const structuredData = JSON.stringify([
       <main>
         <section class="relative overflow-hidden px-6 pb-14 pt-14 md:min-h-[82svh] md:pb-20 md:pt-20">
           <div class="product-field" aria-hidden="true">
-            <div class="draft-lines">
+            <div class="editor-chrome">
+              <span class="editor-dot"></span>
+              <span class="editor-filename">draftside &middot; untitled.md</span>
+              <span class="editor-badge">offline &middot; on-device</span>
+            </div>
+            <div class="draft-body">
               <strong>Notes toward the thing I mean</strong>
               <p>
-                Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence
-                <span class="ghost-text">and offers the next few words.</span>
+                Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class="ghost-text"> and offers the next few words.</span><span class="ghost-key">tab</span>
               </p>
             </div>
-            <div class="side-panel">
-              <span>Gemini Nano ready</span>
-              <span>alternate wording</span>
-              <span>offline drafts</span>
-              <span>Tab to accept</span>
+            <div class="classification">
+              <dl>
+                <dt>form</dt><dd>notes</dd>
+                <dt>intent</dt><dd>drafting</dd>
+                <dt>stance</dt><dd>tentative</dd>
+                <dt>friction</dt><dd>finding the thread</dd>
+              </dl>
             </div>
           </div>
 
           <div class="relative z-10 mx-auto max-w-6xl">
             <div class="max-w-2xl">
-              <p class="mb-5 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Private writing, local intelligence</p>
+              <p class="mb-5 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Open source · 100% offline · Local AI</p>
               <h1 class="text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-zinc-950 text-balance dark:text-zinc-50 sm:text-6xl md:text-7xl">
                 Draftside
               </h1>
               <p class="mt-6 max-w-[38rem] text-lg leading-8 text-zinc-600 text-pretty dark:text-zinc-400">
-                A minimal writing editor that helps you finish thoughts without sending your drafts to a server. It uses TipTap, offline storage, and Chrome built-in Gemini Nano for private autocomplete, rewrites, classification, and alternate phrasing.
+                An open source writing editor that runs entirely in your browser. Chrome's built-in Gemini Nano powers inline completions, rewrites, alternate phrasing, and draft classification &mdash; all on your device. No account. No API key. No server.
               </p>
               <div class="mt-9 flex flex-col gap-3 sm:flex-row">
                 <a href="/editor" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200">
                   Open the editor
                 </a>
-                <a href="#how-it-works" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900">
-                  See how it works
+                <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900">
+                  View on GitHub
                 </a>
               </div>
             </div>
@@ -387,20 +466,20 @@ const structuredData = JSON.stringify([
             </div>
             <div class="feature-grid grid gap-8 sm:grid-cols-2">
               <div>
-                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Offline by default</h3>
-                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Drafts persist in browser storage and the app is installable as a PWA. Keep working when the network disappears.</p>
+                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">100% offline. Always.</h3>
+                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Drafts live in your browser's storage. Install Draftside as a PWA and keep writing on a plane, in a tunnel, or anywhere there's no network.</p>
               </div>
               <div>
-                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Local Gemini Nano</h3>
-                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">When Chrome exposes built-in AI, Draftside runs inference on-device for sentence completion and writing assistance.</p>
+                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">On-device Gemini Nano</h3>
+                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Chrome runs the model on your machine. No API keys, no rate limits, no servers. Your draft never leaves the tab.</p>
               </div>
               <div>
-                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Subtle completions</h3>
-                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Pause for a second and Draftside suggests a faint continuation. Press Tab to accept, or keep typing to ignore it.</p>
+                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Read your own draft</h3>
+                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Ask the local model to classify what you've written &mdash; its form, intent, stance, and the friction holding it back. A second mind on the page, run locally.</p>
               </div>
               <div>
-                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Language at the cursor</h3>
-                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Highlight a word or phrase to get alternate wording from the local model, then click once to swap it inline.</p>
+                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Suggestions, not interruptions</h3>
+                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Pause briefly and Draftside offers a faint continuation. Highlight a phrase to swap in alternate wording. Tab to accept, keep typing to ignore.</p>
               </div>
             </div>
           </div>
@@ -411,7 +490,7 @@ const structuredData = JSON.stringify([
             <div class="max-w-2xl">
               <h2 class="text-3xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50">Open a blank page with a useful edge.</h2>
               <p class="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-                Draftside is built for notes, essays, posts, and any draft that benefits from a second pass without leaving the writing flow.
+                Draftside is built for notes, essays, posts, and any draft that benefits from a second pass without leaving the writing flow. Open source, no account, runs in your browser. Open it and start typing.
               </p>
               <a href="/editor" class="mt-7 inline-flex min-h-11 items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200">
                 Start drafting
@@ -426,6 +505,7 @@ const structuredData = JSON.stringify([
           <span>&copy; 2026 <a href="https://armstr.ng" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Colin Armstrong</a></span>
           <div class="flex items-center gap-6">
             <a href="/editor" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Editor</a>
+            <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">GitHub</a>
             <a href={xUrl} target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">@colinarms</a>
           </div>
         </div>
