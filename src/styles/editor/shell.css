@@ -1,0 +1,172 @@
+.editor-page,
+.editor-app {
+  --font-sans: "Geist Variable", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "DM Mono", "Courier New", monospace;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 14%;
+  --card: 0 0% 100%;
+  --card-foreground: var(--foreground);
+  --popover: 0 0% 100%;
+  --popover-foreground: var(--foreground);
+  --primary: 0 0% 14%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 14%;
+  --muted: var(--secondary);
+  --muted-foreground: 0 0% 46%;
+  --accent: 0 0% 96%;
+  --accent-foreground: 0 0% 14%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 86% 97%;
+  --border: 0 0% 91%;
+  --input: 0 0% 91%;
+  --ring: 0 0% 56%;
+  --radius: 10px;
+  --on-muted: var(--foreground);
+  --button-primary: var(--primary);
+  --button-primary-foreground: 0 0% 100%;
+  --widget: 0 0% 98%;
+}
+
+.editor-page button,
+.editor-page input,
+.editor-page textarea {
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.editor-app {
+  --ai-rail-width: 0rem;
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr) var(--ai-rail-width);
+  gap: 0.5rem;
+  width: 100vw;
+  height: 100svh;
+  min-height: 100svh;
+  padding: 0.5rem;
+  background: hsl(var(--muted) / 0.4);
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    grid-template-columns 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    gap 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease-out;
+}
+
+.editor-app.is-ai-open {
+  --ai-rail-width: 22rem;
+}
+
+.editor-app.is-focus-mode {
+  --ai-rail-width: 0rem;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  gap: 0;
+  padding: 0;
+  background: hsl(var(--card));
+}
+
+.session-rail,
+.editor-main,
+.ai-rail {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: calc(var(--radius) + 8px);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  outline: 1px solid hsl(var(--border) / 0.6);
+  outline-offset: -1px;
+}
+
+.session-rail {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    opacity 180ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    outline-color 180ms ease-out,
+    visibility 0s linear 0s;
+}
+
+.ai-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    opacity 180ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    outline-color 180ms ease-out,
+    visibility 0s linear 0s;
+}
+
+.editor-app:not(.is-ai-open) .ai-rail {
+  padding-right: 0;
+  padding-left: 0;
+  opacity: 0;
+  transform: translateX(1rem);
+  visibility: hidden;
+  pointer-events: none;
+  outline-color: transparent;
+  transition:
+    opacity 140ms ease-out,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    outline-color 140ms ease-out,
+    visibility 0s linear 220ms;
+}
+
+.editor-app.is-focus-mode .session-rail {
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-1rem);
+  visibility: hidden;
+  pointer-events: none;
+  outline-color: transparent;
+  transition:
+    opacity 140ms ease-out,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    outline-color 140ms ease-out,
+    visibility 0s linear 220ms;
+}
+
+.editor-app.is-focus-mode .ai-rail {
+  padding: 0;
+  opacity: 0;
+  transform: translateX(1rem);
+  visibility: hidden;
+  pointer-events: none;
+  outline-color: transparent;
+  transition:
+    opacity 140ms ease-out,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    outline-color 140ms ease-out,
+    visibility 0s linear 220ms;
+}
+
+.editor-app.is-focus-mode .editor-main {
+  border-radius: 0;
+  outline-color: transparent;
+}

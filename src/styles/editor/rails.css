@@ -1,0 +1,68 @@
+.rail-header,
+.ai-header {
+  display: flex;
+  min-height: 3.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.ai-header {
+  min-height: auto;
+  padding: 0;
+}
+
+.rail-header {
+  align-items: flex-start;
+}
+
+.rail-title-block {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+}
+
+.rail-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rail-add-button {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: calc(var(--radius) - 2px);
+}
+
+.ai-top {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0.875rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  min-height: 1.5rem;
+  align-items: center;
+  margin: 0 0 0.35rem;
+  padding: 0 0.5rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: hsl(var(--muted) / 0.7);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+}
+
+.rail-header h1,
+.ai-header h2 {
+  margin: 0;
+  color: hsl(var(--foreground));
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.75rem;
+  letter-spacing: 0;
+}

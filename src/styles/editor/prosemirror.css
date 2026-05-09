@@ -1,0 +1,157 @@
+.localwrite-prosemirror {
+  min-height: 0;
+  flex: 1 1 auto;
+  outline: none;
+  color: hsl(var(--foreground));
+  caret-color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.75;
+  letter-spacing: 0;
+}
+
+.localwrite-prosemirror > * + * {
+  margin-top: 0.75em;
+}
+
+.localwrite-prosemirror p {
+  margin: 0;
+}
+
+.localwrite-prosemirror h1,
+.localwrite-prosemirror h2,
+.localwrite-prosemirror h3 {
+  margin: 1.4em 0 0.35em;
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.localwrite-prosemirror h1 {
+  font-size: 1.875rem;
+}
+
+.localwrite-prosemirror h2 {
+  font-size: 1.5rem;
+}
+
+.localwrite-prosemirror h3 {
+  font-size: 1.25rem;
+}
+
+.localwrite-prosemirror ul,
+.localwrite-prosemirror ol {
+  padding-left: 1.625em;
+}
+
+.localwrite-prosemirror li {
+  padding-left: 0.25em;
+}
+
+.localwrite-prosemirror blockquote {
+  position: relative;
+  margin-left: 0;
+  padding: 0.5em 0 0.5em 1.5em;
+  border-left: 0;
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+
+.localwrite-prosemirror blockquote::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.25em;
+  height: 1.75em;
+  border-radius: 2px;
+  background: hsl(var(--border));
+}
+
+.localwrite-prosemirror code {
+  padding: 0.15em 0.3em;
+  border-radius: 0.25em;
+  background: hsl(var(--foreground) / 0.07);
+  color: hsl(var(--foreground));
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+.localwrite-prosemirror pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.localwrite-prosemirror pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.localwrite-prosemirror mark {
+  border-radius: 0.25em;
+  background: hsl(var(--muted));
+  color: inherit;
+}
+
+.localwrite-prosemirror a {
+  color: hsl(var(--foreground));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--muted-foreground) / 0.5);
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 150ms ease-out;
+}
+
+.localwrite-prosemirror a:hover {
+  text-decoration-color: hsl(var(--foreground));
+}
+
+.localwrite-prosemirror ul[data-type="taskList"] {
+  padding-left: 0;
+  list-style: none;
+}
+
+.localwrite-prosemirror li[data-type="taskItem"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.localwrite-prosemirror li[data-type="taskItem"] > label {
+  margin-top: 0.35em;
+}
+
+.localwrite-prosemirror li[data-type="taskItem"] > div {
+  flex: 1 1 auto;
+}
+
+.localwrite-prosemirror p.is-editor-empty:first-child::before,
+.localwrite-prosemirror .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: hsl(var(--muted-foreground) / 0.8);
+  pointer-events: none;
+}
+
+.localwrite-prosemirror ::selection {
+  background: hsl(var(--foreground) / 0.12);
+}
+
+.ghost-completion {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
