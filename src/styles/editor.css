@@ -291,6 +291,10 @@
   color: hsl(var(--destructive));
 }
 
+.vault-button.is-active {
+  color: hsl(var(--foreground));
+}
+
 .icon-button:disabled,
 .tool-button:disabled,
 .mini-icon:disabled,
@@ -341,6 +345,14 @@
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
   font-weight: 500;
+}
+
+.session-button.is-locked {
+  color: hsl(var(--muted-foreground));
+}
+
+.session-button.is-locked:hover {
+  color: hsl(var(--foreground));
 }
 
 .session-button:disabled {
@@ -711,6 +723,21 @@
   white-space: nowrap;
 }
 
+.editor-footer-github {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.125rem;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.75;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.editor-footer-github:hover,
+.editor-footer-github:focus-visible {
+  opacity: 1;
+  color: hsl(var(--foreground));
+}
+
 .editor-paper {
   position: relative;
   box-sizing: border-box;
@@ -720,6 +747,60 @@
   min-height: 100%;
   margin: 0 auto;
   padding: 4.5rem clamp(1.5rem, 5vw, 4.5rem) 38vh;
+}
+
+.vault-locked-panel {
+  display: grid;
+  width: min(100%, 34rem);
+  min-height: 100%;
+  margin: 0 auto;
+  place-content: center;
+  justify-items: center;
+  gap: 0.85rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.vault-locked-icon {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--radius) + 6px);
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.vault-locked-panel h2 {
+  margin: 0;
+  color: hsl(var(--foreground));
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.7rem;
+}
+
+.vault-locked-panel p {
+  max-width: 28rem;
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.vault-locked-panel button {
+  display: inline-flex;
+  min-height: 2.625rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: hsl(var(--button-primary));
+  color: hsl(var(--button-primary-foreground));
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .post-menu {
@@ -906,6 +987,203 @@
 .confirm-danger:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.vault-overlay {
+  position: fixed;
+  z-index: 85;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: hsl(var(--background) / 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.vault-dialog {
+  display: grid;
+  width: min(32rem, 100%);
+  max-height: min(42rem, calc(100svh - 2rem));
+  gap: 1rem;
+  overflow-y: auto;
+  padding: 1rem;
+  border-radius: calc(var(--radius) + 8px);
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow:
+    inset 0 0 0 1px hsl(var(--border)),
+    0 24px 78px hsl(var(--foreground) / 0.16);
+}
+
+.vault-dialog-header {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.875rem;
+  align-items: start;
+}
+
+.vault-dialog-icon {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.vault-dialog h2 {
+  margin: 0;
+  color: hsl(var(--foreground));
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4rem;
+}
+
+.vault-dialog-header p,
+.vault-note,
+.vault-recovery-card p {
+  margin: 0.25rem 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.vault-stack {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.vault-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.vault-feature-grid span,
+.vault-recovery-card,
+.vault-recovery-unlock {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  background: hsl(var(--muted) / 0.55);
+}
+
+.vault-feature-grid strong,
+.vault-recovery-card strong,
+.vault-recovery-unlock label {
+  color: hsl(var(--foreground));
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.2rem;
+}
+
+.vault-feature-grid em {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-style: normal;
+  line-height: 1.25;
+}
+
+.vault-recovery-card code {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 0.625rem;
+  border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.vault-recovery-unlock textarea {
+  min-height: 5rem;
+  resize: vertical;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  outline: none;
+}
+
+.vault-recovery-unlock textarea:focus {
+  border-color: hsl(var(--ring));
+}
+
+.vault-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.vault-primary,
+.vault-secondary,
+.vault-danger {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.vault-full-button {
+  width: 100%;
+}
+
+.vault-primary {
+  background: hsl(var(--button-primary));
+  color: hsl(var(--button-primary-foreground));
+}
+
+.vault-secondary {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.vault-danger {
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+
+.vault-danger:hover {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.vault-primary:disabled,
+.vault-secondary:disabled,
+.vault-danger:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.vault-error {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
 .expression-popover {
@@ -1932,6 +2210,20 @@
 
   .localwrite-prosemirror h1 {
     font-size: 1.75rem;
+  }
+
+  .vault-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vault-actions {
+    flex-direction: column-reverse;
+  }
+
+  .vault-primary,
+  .vault-secondary,
+  .vault-danger {
+    width: 100%;
   }
 
   .ai-rail {

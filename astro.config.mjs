@@ -5,7 +5,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  site: 'https://draftside.armstr.ng',
+  site: 'https://draftside.ai',
   integrations: [react()],
   fonts: [
     {

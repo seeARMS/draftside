@@ -1,4 +1,4 @@
-export const defaultSiteUrl = "https://draftside.armstr.ng";
+export const defaultSiteUrl = "https://draftside.ai";
 export const siteName = "Draftside";
 export const authorName = "Colin Armstrong";
 export const xHandle = "@colinarms";

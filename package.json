@@ -2,8 +2,34 @@
   "name": "draftside-web",
   "version": "0.0.0",
   "private": true,
-  "description": "Offline AI writing editor for Draftside.",
+  "description": "Open source, offline writing editor with on-device AI via Chrome's built-in Gemini Nano.",
   "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Colin Armstrong",
+    "url": "https://armstr.ng"
+  },
+  "homepage": "https://draftside.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seeARMS/draftside.git"
+  },
+  "bugs": {
+    "url": "https://github.com/seeARMS/draftside/issues"
+  },
+  "keywords": [
+    "writing",
+    "editor",
+    "offline",
+    "local-first",
+    "open-source",
+    "gemini-nano",
+    "chrome-built-in-ai",
+    "on-device-ai",
+    "tiptap",
+    "pwa",
+    "astro"
+  ],
   "scripts": {
     "generate-og": "node scripts/generate-og.mjs",
     "dev": "npm run generate-og && astro dev",

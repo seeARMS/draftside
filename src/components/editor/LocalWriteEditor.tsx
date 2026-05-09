@@ -33,6 +33,8 @@ import {
   ListChecks,
   ListOrdered,
   LoaderCircle,
+  Lock,
+  LockOpen,
   MessageSquare,
   Mic,
   MicOff,
@@ -62,6 +64,7 @@ const SESSION_STORE = "sessions";
 const ACTIVE_SESSION_KEY = "localwrite.activeSessionId";
 const THEME_KEY = "draftside.theme";
 const UI_PREFS_KEY = "draftside.uiPrefs";
+const VAULT_META_KEY = "draftside.vault";
 const MAX_MODEL_CHARS = 6500;
 
 const EMPTY_DOC: JSONContent = {
@@ -142,6 +145,8 @@ type ThemeMode = "light" | "dark";
 type ChatRole = "user" | "assistant";
 type RecordingTarget = "chat" | "editor";
 type MultimodalInputType = "audio" | "image";
+type VaultStatus = "disabled" | "locked" | "unlocked";
+type VaultModalView = "intro" | "unlock" | "manage" | "disable";
 
 interface EditorUiPrefs {
   activeSessionId?: string;
@@ -193,6 +198,40 @@ interface WriteSession {
   wordCount: number;
   classification?: Classification;
   chatMessages?: ChatMessage[];
+}
+
+interface EncryptedPayload {
+  alg: "AES-GCM";
+  data: string;
+  iv: string;
+}
+
+interface EncryptedSessionRecord {
+  id: string;
+  encrypted: true;
+  version: 1;
+  createdAt: number;
+  updatedAt: number;
+  ciphertext: EncryptedPayload;
+}
+
+type StoredSessionRecord = WriteSession | EncryptedSessionRecord;
+
+interface LockedSessionSummary {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface VaultMeta {
+  id: string;
+  version: 1;
+  credentialId: string;
+  salt: string;
+  wrappedKey: EncryptedPayload;
+  recoveryWrappedKey?: EncryptedPayload;
+  createdAt: number;
+  updatedAt: number;
 }
 
 interface Capabilities {
@@ -295,17 +334,305 @@ function requestToPromise<T>(request: IDBRequest<T>) {
   });
 }
 
-async function getSessions() {
+function transactionToPromise(tx: IDBTransaction) {
+  return new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB transaction failed."));
+    tx.onabort = () => reject(tx.error ?? new Error("IndexedDB transaction aborted."));
+  });
+}
+
+function randomBytes(length: number) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function bytesToBase64Url(bytes: Uint8Array) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64UrlToBytes(value: string) {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function bytesToHex(bytes: Uint8Array) {
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function hexToBytes(value: string) {
+  const compact = value.replace(/[\s-]/g, "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(compact)) {
+    throw new Error("Recovery key should be 64 hexadecimal characters.");
+  }
+
+  const bytes = new Uint8Array(32);
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Number.parseInt(compact.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+function formatRecoveryKey(bytes: Uint8Array) {
+  return bytesToHex(bytes).match(/.{1,4}/g)?.join("-") ?? bytesToHex(bytes);
+}
+
+function textBytes(value: string) {
+  return new TextEncoder().encode(value);
+}
+
+async function importAesKey(raw: BufferSource) {
+  return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+async function deriveWrappingKey(secret: BufferSource, purpose: string) {
+  const material = await crypto.subtle.importKey("raw", secret, "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: textBytes("draftside-private-vault-v1"),
+      info: textBytes(purpose),
+    },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+async function encryptBytes(key: CryptoKey, bytes: Uint8Array): Promise<EncryptedPayload> {
+  const iv = randomBytes(12);
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, bytes);
+  return {
+    alg: "AES-GCM",
+    data: bytesToBase64Url(new Uint8Array(encrypted)),
+    iv: bytesToBase64Url(iv),
+  };
+}
+
+async function decryptBytes(key: CryptoKey, payload: EncryptedPayload) {
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: base64UrlToBytes(payload.iv) }, key, base64UrlToBytes(payload.data));
+  return new Uint8Array(decrypted);
+}
+
+function isEncryptedSessionRecord(record: unknown): record is EncryptedSessionRecord {
+  if (!record || typeof record !== "object") return false;
+  const data = record as Partial<EncryptedSessionRecord>;
+  return data.encrypted === true && data.version === 1 && typeof data.id === "string" && typeof data.ciphertext?.data === "string";
+}
+
+async function encryptSessionRecord(session: WriteSession, vaultKey: CryptoKey): Promise<EncryptedSessionRecord> {
+  const ciphertext = await encryptBytes(vaultKey, textBytes(JSON.stringify(session)));
+  return {
+    id: session.id,
+    encrypted: true,
+    version: 1,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    ciphertext,
+  };
+}
+
+async function decryptSessionRecord(record: EncryptedSessionRecord, vaultKey: CryptoKey): Promise<WriteSession> {
+  const bytes = await decryptBytes(vaultKey, record.ciphertext);
+  const session = JSON.parse(new TextDecoder().decode(bytes)) as WriteSession;
+  return {
+    ...session,
+    id: session.id || record.id,
+    createdAt: session.createdAt || record.createdAt,
+    updatedAt: session.updatedAt || record.updatedAt,
+  };
+}
+
+function readVaultMeta(): VaultMeta | null {
+  try {
+    const stored = localStorage.getItem(VAULT_META_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored) as Partial<VaultMeta>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.id !== "string" ||
+      typeof parsed.credentialId !== "string" ||
+      typeof parsed.salt !== "string" ||
+      !parsed.wrappedKey ||
+      typeof parsed.wrappedKey.data !== "string" ||
+      typeof parsed.wrappedKey.iv !== "string"
+    ) {
+      return null;
+    }
+
+    return parsed as VaultMeta;
+  } catch {
+    return null;
+  }
+}
+
+function writeVaultMeta(meta: VaultMeta) {
+  localStorage.setItem(VAULT_META_KEY, JSON.stringify(meta));
+}
+
+function clearVaultMeta() {
+  localStorage.removeItem(VAULT_META_KEY);
+}
+
+function ensureVaultRuntime() {
+  if (!window.isSecureContext) {
+    throw new Error("Private Vault requires a secure browser context. Use HTTPS or localhost.");
+  }
+  if (!("PublicKeyCredential" in window) || !navigator.credentials?.create || !navigator.credentials?.get) {
+    throw new Error("This browser does not support passkeys.");
+  }
+  if (!crypto.subtle) {
+    throw new Error("This browser does not support Web Crypto.");
+  }
+}
+
+function getPrfResult(credential: PublicKeyCredential) {
+  const extensions = credential.getClientExtensionResults() as { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } } };
+  const first = extensions.prf?.results?.first;
+  return first ? new Uint8Array(first) : null;
+}
+
+async function createVaultCredential(salt: Uint8Array) {
+  ensureVaultRuntime();
+
+  const credential = (await navigator.credentials.create({
+    publicKey: {
+      challenge: randomBytes(32),
+      rp: { name: "Draftside" },
+      user: {
+        id: randomBytes(32),
+        name: "draftside-local-vault",
+        displayName: "Draftside Local Vault",
+      },
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7 },
+        { type: "public-key", alg: -257 },
+      ],
+      authenticatorSelection: {
+        residentKey: "preferred",
+        userVerification: "required",
+      },
+      attestation: "none",
+      timeout: 120000,
+      extensions: {
+        prf: {
+          eval: {
+            first: salt,
+          },
+        },
+      } as AuthenticationExtensionsClientInputs,
+    },
+  })) as PublicKeyCredential | null;
+
+  if (!credential) throw new Error("Passkey creation was cancelled.");
+
+  const credentialId = bytesToBase64Url(new Uint8Array(credential.rawId));
+  return {
+    credentialId,
+    prf: getPrfResult(credential),
+  };
+}
+
+async function evaluateCredentialPrf(credentialId: string, salt: Uint8Array) {
+  ensureVaultRuntime();
+
+  const assertion = (await navigator.credentials.get({
+    publicKey: {
+      challenge: randomBytes(32),
+      allowCredentials: [
+        {
+          type: "public-key",
+          id: base64UrlToBytes(credentialId),
+        },
+      ],
+      userVerification: "required",
+      timeout: 120000,
+      extensions: {
+        prf: {
+          eval: {
+            first: salt,
+          },
+        },
+      } as AuthenticationExtensionsClientInputs,
+    },
+  })) as PublicKeyCredential | null;
+
+  if (!assertion) throw new Error("Passkey unlock was cancelled.");
+  const prf = getPrfResult(assertion);
+  if (!prf) {
+    throw new Error("This passkey did not expose the PRF output Draftside needs for local encryption.");
+  }
+  return prf;
+}
+
+async function unwrapVaultKey(meta: VaultMeta, wrappingKey: CryptoKey) {
+  const raw = await decryptBytes(wrappingKey, meta.wrappedKey);
+  return importAesKey(raw);
+}
+
+async function getStoredSessionRecords() {
   const db = await openDb();
   const tx = db.transaction(SESSION_STORE, "readonly");
-  const sessions = await requestToPromise<WriteSession[]>(tx.objectStore(SESSION_STORE).getAll());
+  return requestToPromise<StoredSessionRecord[]>(tx.objectStore(SESSION_STORE).getAll());
+}
+
+async function getLockedSessionSummaries(): Promise<LockedSessionSummary[]> {
+  const records = await getStoredSessionRecords();
+  return records
+    .map((record) => ({
+      id: record.id,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+async function getSessions(vaultKey?: CryptoKey | null) {
+  const records = await getStoredSessionRecords();
+  const sessions = await Promise.all(
+    records.map((record) => {
+      if (isEncryptedSessionRecord(record)) {
+        if (!vaultKey) throw new Error("Private Vault is locked.");
+        return decryptSessionRecord(record, vaultKey);
+      }
+
+      return Promise.resolve(record);
+    }),
+  );
   return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-async function putSession(session: WriteSession) {
+async function putSession(session: WriteSession, vaultKey?: CryptoKey | null) {
+  const record = vaultKey ? await encryptSessionRecord(session, vaultKey) : session;
   const db = await openDb();
   const tx = db.transaction(SESSION_STORE, "readwrite");
-  await requestToPromise(tx.objectStore(SESSION_STORE).put(session));
+  await requestToPromise(tx.objectStore(SESSION_STORE).put(record));
+}
+
+async function replaceAllSessions(sessions: WriteSession[], vaultKey?: CryptoKey | null) {
+  const records = await Promise.all(sessions.map((session) => (vaultKey ? encryptSessionRecord(session, vaultKey) : Promise.resolve(session))));
+  const db = await openDb();
+  const tx = db.transaction(SESSION_STORE, "readwrite");
+  const store = tx.objectStore(SESSION_STORE);
+  store.clear();
+  records.forEach((record) => store.put(record));
+  await transactionToPromise(tx);
 }
 
 async function removeSession(id: string) {
@@ -1238,7 +1565,9 @@ async function getDraftsideCacheStats() {
 }
 
 export default function LocalWriteEditor() {
+  const initialVaultMeta = useMemo(() => readVaultMeta(), []);
   const [sessions, setSessions] = useState<WriteSession[]>([]);
+  const [lockedSessions, setLockedSessions] = useState<LockedSessionSummary[]>([]);
   const [activeSession, setActiveSession] = useState<WriteSession | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -1284,6 +1613,14 @@ export default function LocalWriteEditor() {
   const [aiSidebarOpen, setAiSidebarOpen] = useState(() => readStoredUiPrefs().aiSidebarOpen ?? true);
   const [aiTab, setAiTab] = useState<AiTab>(() => readStoredUiPrefs().aiTab ?? "chat");
   const [focusMode, setFocusMode] = useState(() => readStoredUiPrefs().focusMode ?? false);
+  const [vaultMeta, setVaultMeta] = useState<VaultMeta | null>(initialVaultMeta);
+  const [vaultStatus, setVaultStatus] = useState<VaultStatus>(initialVaultMeta ? "locked" : "disabled");
+  const [vaultModalOpen, setVaultModalOpen] = useState(false);
+  const [vaultModalView, setVaultModalView] = useState<VaultModalView>(initialVaultMeta ? "unlock" : "intro");
+  const [vaultBusy, setVaultBusy] = useState(false);
+  const [vaultError, setVaultError] = useState("");
+  const [vaultRecoveryKey, setVaultRecoveryKey] = useState("");
+  const [vaultRecoveryInput, setVaultRecoveryInput] = useState("");
   const [expressionTarget, setExpressionTarget] = useState<ExpressionTarget | null>(null);
   const [expressionOptions, setExpressionOptions] = useState<ExpressionOption[]>([]);
   const [expressionLoading, setExpressionLoading] = useState(false);
@@ -1300,6 +1637,7 @@ export default function LocalWriteEditor() {
   const completionRequestRef = useRef(0);
   const activeSessionRef = useRef<WriteSession | null>(null);
   const languageModelRef = useRef<LanguageModel | null>(null);
+  const vaultKeyRef = useRef<CryptoKey | null>(null);
   const creatingModelRef = useRef<Promise<LanguageModel> | null>(null);
   const multimodalLanguageModelRef = useRef(new Map<string, LanguageModel>());
   const creatingMultimodalModelRef = useRef(new Map<string, Promise<LanguageModel>>());
@@ -1315,6 +1653,8 @@ export default function LocalWriteEditor() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
+
+  const saveSession = useCallback((session: WriteSession) => putSession(session, vaultKeyRef.current), []);
 
   const extensions = useMemo(
     () => [
@@ -1369,13 +1709,13 @@ export default function LocalWriteEditor() {
     setSaveState("saving");
 
     try {
-      await putSession(next);
+      await saveSession(next);
       setSaveState("saved");
       setLastSavedAt(Date.now());
     } catch {
       setSaveState("error");
     }
-  }, []);
+  }, [saveSession]);
 
   const scheduleSave = useCallback(
     (editorInstance: NonNullable<ReturnType<typeof useEditor>>) => {
@@ -1402,13 +1742,13 @@ export default function LocalWriteEditor() {
     setActiveSession(next);
     setSessions((previous) => [next, ...previous.filter((session) => session.id !== next.id)].sort((a, b) => b.updatedAt - a.updatedAt));
     setSaveState("saving");
-    void putSession(next)
+    void saveSession(next)
       .then(() => {
         setSaveState("saved");
         setLastSavedAt(Date.now());
       })
       .catch(() => setSaveState("error"));
-  }, []);
+  }, [saveSession]);
 
   const editor = useEditor({
     extensions,
@@ -1506,6 +1846,21 @@ export default function LocalWriteEditor() {
 
     async function hydrateSessions() {
       try {
+        const storedVaultMeta = readVaultMeta();
+
+        if (storedVaultMeta) {
+          const summaries = await getLockedSessionSummaries();
+          if (!mounted) return;
+          setVaultMeta(storedVaultMeta);
+          setVaultStatus("locked");
+          setLockedSessions(summaries);
+          setSessions([]);
+          setActiveSession(null);
+          activeSessionRef.current = null;
+          setLastSavedAt(summaries[0]?.updatedAt ?? null);
+          return;
+        }
+
         const stored = await getSessions();
         let nextSessions = stored;
 
@@ -1520,6 +1875,7 @@ export default function LocalWriteEditor() {
 
         if (!mounted) return;
         setSessions(nextSessions);
+        setLockedSessions([]);
         setActiveSession(selected);
         activeSessionRef.current = selected;
         setLastSavedAt(selected.updatedAt);
@@ -1528,6 +1884,7 @@ export default function LocalWriteEditor() {
         const blank = createBlankSession();
         if (!mounted) return;
         setSessions([blank]);
+        setLockedSessions([]);
         setActiveSession(blank);
         activeSessionRef.current = blank;
         setLastSavedAt(null);
@@ -1559,6 +1916,10 @@ export default function LocalWriteEditor() {
       setExpressionTarget(null);
     });
   }, [activeSession?.id, editor]);
+
+  useEffect(() => {
+    editor?.setEditable(vaultStatus !== "locked");
+  }, [editor, vaultStatus]);
 
   useEffect(() => {
     const element = chatMessagesRef.current;
@@ -1761,7 +2122,9 @@ export default function LocalWriteEditor() {
   const currentClassification = activeSession?.classification;
   const chatMessages = activeSession?.chatMessages ?? [];
   const chatPending = aiAction === "chat";
-  const canSendChat = Boolean((chatInput.trim() || chatImages.length) && capabilities.prompt && activeSession && aiAction === null && !recordingTarget);
+  const vaultLocked = vaultStatus === "locked";
+  const vaultEnabled = vaultStatus === "locked" || vaultStatus === "unlocked";
+  const canSendChat = Boolean((chatInput.trim() || chatImages.length) && capabilities.prompt && activeSession && aiAction === null && !recordingTarget && !vaultLocked);
   const modelContextRatio =
     typeof modelInfo.contextUsage === "number" && typeof modelInfo.contextWindow === "number" && modelInfo.contextWindow > 0
       ? modelInfo.contextUsage / modelInfo.contextWindow
@@ -2033,16 +2396,16 @@ export default function LocalWriteEditor() {
 
   const replaceSelectionOrInsert = useCallback(
     (text: string) => {
-      if (!editor || !text.trim()) return;
+      if (!editor || vaultLocked || !text.trim()) return;
       editor.chain().focus().insertContent(text).run();
       scheduleSave(editor);
     },
-    [editor, scheduleSave],
+    [editor, scheduleSave, vaultLocked],
   );
 
   const applyDraftUpdate = useCallback(
     (update: DraftUpdate) => {
-      if (!editor || !update.text.trim()) return false;
+      if (!editor || vaultLocked || !update.text.trim()) return false;
 
       clearEditorGhostCompletion(editor);
       setGhostCompletionText("");
@@ -2052,7 +2415,7 @@ export default function LocalWriteEditor() {
       scheduleSave(editor);
       return true;
     },
-    [editor, scheduleSave],
+    [editor, scheduleSave, vaultLocked],
   );
 
   const transcribeAudio = useCallback(
@@ -2327,7 +2690,7 @@ export default function LocalWriteEditor() {
       completionRequestRef.current += 1;
     };
 
-    if (!capabilities.prompt || aiAction || expressionTarget || postMenuOpen || !selection.empty || !editor.isFocused) {
+    if (!capabilities.prompt || aiAction || expressionTarget || postMenuOpen || vaultLocked || !selection.empty || !editor.isFocused) {
       clearCompletion();
       return;
     }
@@ -2392,7 +2755,7 @@ export default function LocalWriteEditor() {
       if (completionTimerRef.current) window.clearTimeout(completionTimerRef.current);
       completionRequestRef.current += 1;
     };
-  }, [aiAction, capabilities.prompt, completionTick, editor, ensureLanguageModel, expressionTarget, postMenuOpen, selection.empty]);
+  }, [aiAction, capabilities.prompt, completionTick, editor, ensureLanguageModel, expressionTarget, postMenuOpen, selection.empty, vaultLocked]);
 
   const prepareModel = useCallback(async () => {
     setAiAction("prepare");
@@ -2559,7 +2922,7 @@ export default function LocalWriteEditor() {
         activeSessionRef.current = next;
         setActiveSession(next);
         setSessions((previous) => [next, ...previous.filter((session) => session.id !== next.id)].sort((a, b) => b.updatedAt - a.updatedAt));
-        await putSession(next);
+        await saveSession(next);
         setSaveState("saved");
         setLastSavedAt(Date.now());
       }
@@ -2570,7 +2933,7 @@ export default function LocalWriteEditor() {
     } finally {
       setAiAction(null);
     }
-  }, [detectLanguage, ensureLanguageModel, getModelText]);
+  }, [detectLanguage, ensureLanguageModel, getModelText, saveSession]);
 
   const thinkWithDraft = useCallback(async () => {
     const text = getModelText();
@@ -2746,7 +3109,7 @@ export default function LocalWriteEditor() {
 
   const handleEditorPointerUp = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
-      if (!editor || event.button !== 0) return;
+      if (!editor || vaultLocked || event.button !== 0) return;
       const target = event.target as HTMLElement;
       if (!editor.view.dom.contains(target)) return;
 
@@ -2760,7 +3123,7 @@ export default function LocalWriteEditor() {
         void requestExpressionOptions(nextTarget);
       }, 0);
     },
-    [closeExpressionPopover, editor, requestExpressionOptions],
+    [closeExpressionPopover, editor, requestExpressionOptions, vaultLocked],
   );
 
   const applyExpressionOption = useCallback(
@@ -2778,9 +3141,241 @@ export default function LocalWriteEditor() {
     [closeExpressionPopover, editor, expressionTarget, scheduleSave],
   );
 
+  const getCurrentSessionsSnapshot = useCallback(() => {
+    const current = activeSessionRef.current;
+    if (!editor || !current) return sessions;
+
+    const plainText = editor.getText();
+    const next: WriteSession = {
+      ...current,
+      title: deriveTitle(plainText),
+      content: editor.getJSON(),
+      plainText,
+      updatedAt: Date.now(),
+      wordCount: countWords(plainText),
+    };
+
+    return [next, ...sessions.filter((session) => session.id !== next.id)].sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [editor, sessions]);
+
+  const openVaultModal = useCallback(
+    (view?: VaultModalView) => {
+      setVaultError("");
+      setVaultRecoveryInput("");
+      setVaultModalView(view ?? (vaultStatus === "unlocked" ? "manage" : vaultStatus === "locked" ? "unlock" : "intro"));
+      setVaultModalOpen(true);
+    },
+    [vaultStatus],
+  );
+
+  const loadUnlockedSessions = useCallback(
+    async (vaultKey: CryptoKey) => {
+      let nextSessions = await getSessions(vaultKey);
+
+      if (!nextSessions.length) {
+        const blank = createBlankSession();
+        await putSession(blank, vaultKey);
+        nextSessions = [blank];
+      }
+
+      const activeId = readStoredActiveSessionId();
+      const selected = nextSessions.find((session) => session.id === activeId) ?? nextSessions[0];
+
+      setSessions(nextSessions);
+      setLockedSessions([]);
+      setActiveSession(selected);
+      activeSessionRef.current = selected;
+      setLastSavedAt(selected.updatedAt);
+      setSaveState("idle");
+      storeActiveSessionId(selected.id);
+    },
+    [],
+  );
+
+  const unlockVaultWithKey = useCallback(
+    async (vaultKey: CryptoKey) => {
+      vaultKeyRef.current = vaultKey;
+      await loadUnlockedSessions(vaultKey);
+      setVaultStatus("unlocked");
+      setVaultModalView("manage");
+      setVaultModalOpen(false);
+      setVaultError("");
+    },
+    [loadUnlockedSessions],
+  );
+
+  const unlockVaultWithPasskey = useCallback(async () => {
+    const meta = vaultMeta ?? readVaultMeta();
+    if (!meta) return;
+
+    setVaultBusy(true);
+    setVaultError("");
+
+    try {
+      const prf = await evaluateCredentialPrf(meta.credentialId, base64UrlToBytes(meta.salt));
+      const wrappingKey = await deriveWrappingKey(prf, `passkey:${meta.id}`);
+      const vaultKey = await unwrapVaultKey(meta, wrappingKey);
+      await unlockVaultWithKey(vaultKey);
+      setVaultMeta(meta);
+    } catch (error) {
+      setVaultError(error instanceof Error ? error.message : "Could not unlock Private Vault.");
+    } finally {
+      setVaultBusy(false);
+    }
+  }, [unlockVaultWithKey, vaultMeta]);
+
+  const unlockVaultWithRecoveryKey = useCallback(async () => {
+    const meta = vaultMeta ?? readVaultMeta();
+    if (!meta?.recoveryWrappedKey) {
+      setVaultError("This vault does not have a recovery key.");
+      return;
+    }
+
+    setVaultBusy(true);
+    setVaultError("");
+
+    try {
+      const recoveryBytes = hexToBytes(vaultRecoveryInput);
+      const wrappingKey = await deriveWrappingKey(recoveryBytes, `recovery:${meta.id}`);
+      const rawVaultKey = await decryptBytes(wrappingKey, meta.recoveryWrappedKey);
+      const vaultKey = await importAesKey(rawVaultKey);
+      await unlockVaultWithKey(vaultKey);
+      setVaultMeta(meta);
+    } catch (error) {
+      setVaultError(error instanceof Error ? error.message : "Recovery key could not unlock this vault.");
+    } finally {
+      setVaultBusy(false);
+    }
+  }, [unlockVaultWithKey, vaultMeta, vaultRecoveryInput]);
+
+  const enableVault = useCallback(async () => {
+    setVaultBusy(true);
+    setVaultError("");
+
+    try {
+      ensureVaultRuntime();
+
+      const sessionsToEncrypt = getCurrentSessionsSnapshot();
+      const vaultKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+      const rawVaultKey = new Uint8Array(await crypto.subtle.exportKey("raw", vaultKey));
+      const salt = randomBytes(32);
+      const vaultId = crypto.randomUUID();
+      const credential = await createVaultCredential(salt);
+      const prf = credential.prf ?? (await evaluateCredentialPrf(credential.credentialId, salt));
+      const passkeyWrappingKey = await deriveWrappingKey(prf, `passkey:${vaultId}`);
+      const wrappedKey = await encryptBytes(passkeyWrappingKey, rawVaultKey);
+      const recoveryBytes = randomBytes(32);
+      const recoveryWrappingKey = await deriveWrappingKey(recoveryBytes, `recovery:${vaultId}`);
+      const recoveryWrappedKey = await encryptBytes(recoveryWrappingKey, rawVaultKey);
+      const now = Date.now();
+      const nextMeta: VaultMeta = {
+        id: vaultId,
+        version: 1,
+        credentialId: credential.credentialId,
+        salt: bytesToBase64Url(salt),
+        wrappedKey,
+        recoveryWrappedKey,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+      writeVaultMeta(nextMeta);
+      vaultKeyRef.current = vaultKey;
+      try {
+        await replaceAllSessions(sessionsToEncrypt, vaultKey);
+      } catch (error) {
+        clearVaultMeta();
+        vaultKeyRef.current = null;
+        throw error;
+      }
+      setVaultMeta(nextMeta);
+      setVaultStatus("unlocked");
+      setVaultRecoveryKey(formatRecoveryKey(recoveryBytes));
+      setVaultModalView("manage");
+      setSessions(sessionsToEncrypt);
+      setLockedSessions([]);
+      setActiveSession((current) => sessionsToEncrypt.find((session) => session.id === current?.id) ?? sessionsToEncrypt[0] ?? null);
+      activeSessionRef.current = sessionsToEncrypt.find((session) => session.id === activeSessionRef.current?.id) ?? sessionsToEncrypt[0] ?? null;
+      setSaveState("saved");
+      setLastSavedAt(Date.now());
+    } catch (error) {
+      if (!vaultMeta) vaultKeyRef.current = null;
+      setVaultError(error instanceof Error ? error.message : "Could not enable Private Vault.");
+      setVaultStatus(vaultMeta ? "locked" : "disabled");
+    } finally {
+      setVaultBusy(false);
+    }
+  }, [getCurrentSessionsSnapshot, vaultMeta]);
+
+  const lockVault = useCallback(async () => {
+    const summaries = await getLockedSessionSummaries().catch(() => []);
+    vaultKeyRef.current = null;
+    activeSessionRef.current = null;
+    setSessions([]);
+    setLockedSessions(summaries);
+    setActiveSession(null);
+    setLastSavedAt(summaries[0]?.updatedAt ?? null);
+    setSaveState("idle");
+    setAiOutput("");
+    setAiError("");
+    setChatError("");
+    setExpressionTarget(null);
+    setGhostCompletionText("");
+    if (editor) {
+      clearEditorGhostCompletion(editor);
+      editor.commands.clearContent();
+    }
+    languageModelRef.current?.destroy();
+    languageModelRef.current = null;
+    multimodalLanguageModelRef.current.forEach((session) => session.destroy());
+    multimodalLanguageModelRef.current.clear();
+    setVaultStatus("locked");
+    setVaultModalView("unlock");
+    setVaultModalOpen(false);
+  }, [editor]);
+
+  const disableVault = useCallback(async () => {
+    if (!vaultKeyRef.current || vaultStatus !== "unlocked") {
+      setVaultError("Unlock Private Vault before removing encryption.");
+      setVaultModalView("unlock");
+      return;
+    }
+
+    setVaultBusy(true);
+    setVaultError("");
+
+    try {
+      const sessionsToWrite = getCurrentSessionsSnapshot();
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+      await replaceAllSessions(sessionsToWrite, null);
+      clearVaultMeta();
+      vaultKeyRef.current = null;
+      setVaultMeta(null);
+      setVaultStatus("disabled");
+      setVaultRecoveryKey("");
+      setVaultRecoveryInput("");
+      setVaultModalView("intro");
+      setVaultModalOpen(false);
+      setSessions(sessionsToWrite);
+      setLockedSessions([]);
+      setSaveState("saved");
+      setLastSavedAt(Date.now());
+    } catch (error) {
+      setVaultError(error instanceof Error ? error.message : "Could not remove encryption.");
+    } finally {
+      setVaultBusy(false);
+    }
+  }, [getCurrentSessionsSnapshot, vaultStatus]);
+
   const createSession = useCallback(async () => {
+    if (vaultLocked) {
+      openVaultModal("unlock");
+      return;
+    }
+
     const blank = createBlankSession();
-    await putSession(blank);
+    await saveSession(blank);
     setSessions((previous) => [blank, ...previous]);
     setActiveSession(blank);
     activeSessionRef.current = blank;
@@ -2790,7 +3385,7 @@ export default function LocalWriteEditor() {
     setAiOutput("");
     setAiError("");
     setChatError("");
-  }, []);
+  }, [openVaultModal, saveSession, vaultLocked]);
 
   const selectSession = useCallback((session: WriteSession) => {
     setActiveSession(session);
@@ -2833,7 +3428,7 @@ export default function LocalWriteEditor() {
     }
 
     const blank = createBlankSession();
-    await putSession(blank);
+    await saveSession(blank);
     setSessions([blank]);
     setActiveSession(blank);
     activeSessionRef.current = blank;
@@ -2841,7 +3436,7 @@ export default function LocalWriteEditor() {
     setLastSavedAt(blank.updatedAt);
     setSaveState("saved");
     setChatError("");
-  }, [activeSession?.id, deleteTarget, sessions]);
+  }, [activeSession?.id, deleteTarget, saveSession, sessions]);
 
   const getCurrentDoc = useCallback(() => {
     return editor?.getJSON() ?? activeSession?.content ?? EMPTY_DOC;
@@ -2908,7 +3503,7 @@ export default function LocalWriteEditor() {
       className={active ? "tool-button is-active" : "tool-button"}
       aria-label={label}
       title={label}
-      disabled={disabled}
+      disabled={disabled || vaultLocked}
       onClick={onClick}
     >
       {children}
@@ -2922,10 +3517,16 @@ export default function LocalWriteEditor() {
       <aside className="session-rail" aria-label="Writing sessions" aria-hidden={focusMode}>
         <div className="rail-header">
           <div className="rail-title-block">
-            <p className="eyebrow">Draftside</p>
             <div className="rail-title-row">
               <h1>Drafts</h1>
-              <button type="button" className="icon-button rail-add-button" onClick={createSession} disabled={chatPending} aria-label="New draft" title="New draft">
+              <button
+                type="button"
+                className="icon-button rail-add-button"
+                onClick={createSession}
+                disabled={chatPending || vaultLocked}
+                aria-label="New draft"
+                title={vaultLocked ? "Unlock drafts first" : "New draft"}
+              >
                 <Plus size={17} />
               </button>
             </div>
@@ -2933,34 +3534,40 @@ export default function LocalWriteEditor() {
         </div>
 
         <div className="session-list">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className={activeSession?.id === session.id ? "session-item is-active" : "session-item"}
-            >
-              <button
-                type="button"
-                className={activeSession?.id === session.id ? "session-button is-active" : "session-button"}
-                onClick={() => selectSession(session)}
-                disabled={chatPending}
-              >
-                <span className="session-title">{session.title}</span>
-                <span className="session-meta">
-                  {session.wordCount} words · {formatUpdatedAt(session.updatedAt)}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="session-delete-button"
-                onClick={() => requestDeleteSession(session)}
-                disabled={chatPending}
-                aria-label={`Delete ${session.title || "Untitled"}`}
-                title="Delete draft"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+          {vaultLocked
+            ? lockedSessions.map((session) => (
+                <div key={session.id} className="session-item is-locked">
+                  <button type="button" className="session-button is-locked" onClick={() => openVaultModal("unlock")}>
+                    <span className="session-title">Locked draft</span>
+                    <span className="session-meta">{formatUpdatedAt(session.updatedAt)}</span>
+                  </button>
+                </div>
+              ))
+            : sessions.map((session) => (
+                <div key={session.id} className={activeSession?.id === session.id ? "session-item is-active" : "session-item"}>
+                  <button
+                    type="button"
+                    className={activeSession?.id === session.id ? "session-button is-active" : "session-button"}
+                    onClick={() => selectSession(session)}
+                    disabled={chatPending}
+                  >
+                    <span className="session-title">{session.title}</span>
+                    <span className="session-meta">
+                      {session.wordCount} words · {formatUpdatedAt(session.updatedAt)}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="session-delete-button"
+                    onClick={() => requestDeleteSession(session)}
+                    disabled={chatPending}
+                    aria-label={`Delete ${session.title || "Untitled"}`}
+                    title="Delete draft"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
         </div>
 
         <div className="rail-footer">
@@ -3249,7 +3856,7 @@ export default function LocalWriteEditor() {
             type="button"
             className={recordingTarget === "editor" ? "icon-button is-active is-recording" : "icon-button"}
             onClick={() => void toggleRecording("editor")}
-            disabled={!capabilities.prompt || aiAction !== null || (recordingTarget !== null && recordingTarget !== "editor")}
+            disabled={vaultLocked || !capabilities.prompt || aiAction !== null || (recordingTarget !== null && recordingTarget !== "editor")}
             aria-label={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
             title={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
           >
@@ -3263,6 +3870,16 @@ export default function LocalWriteEditor() {
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           >
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
+          <button
+            type="button"
+            className={vaultEnabled ? "icon-button vault-button is-active" : "icon-button vault-button"}
+            onClick={() => openVaultModal()}
+            aria-label={vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Manage Private Vault" : "Enable Private Vault"}
+            aria-pressed={vaultEnabled}
+            title={vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Private Vault enabled" : "Private Vault"}
+          >
+            {vaultStatus === "unlocked" ? <LockOpen size={17} /> : <Lock size={17} />}
           </button>
           <button
             type="button"
@@ -3327,62 +3944,87 @@ export default function LocalWriteEditor() {
         </div>
 
         <div className="editor-scroll">
-          <article className="editor-paper" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={handleEditorPointerUp}>
-            <EditorContent editor={editor} />
-            {expressionTarget ? (
-              <div
-                ref={expressionPopoverRef}
-                className="expression-popover"
-                role="dialog"
-                aria-label={`Alternates for ${expressionTarget.text}`}
-                style={
-                  {
-                    "--expression-left": `${expressionTarget.position.left}px`,
-                    "--expression-top": `${expressionTarget.position.top}px`,
-                  } as React.CSSProperties
-                }
-              >
-                <div className="expression-header">
-                  <div>
-                    <span className="expression-kicker">Alternates</span>
-                    <span className="expression-target">{expressionTarget.text}</span>
-                  </div>
-                  <button type="button" className="expression-close" onClick={closeExpressionPopover} aria-label="Close alternates" title="Close">
-                    <X size={14} />
-                  </button>
-                </div>
-
-                {expressionLoading ? (
-                  <div className="expression-state">
-                    <LoaderCircle className="spin" size={15} />
-                    Thinking locally
-                  </div>
-                ) : expressionError ? (
-                  <p className="expression-error">{expressionError}</p>
-                ) : (
-                  <div className="expression-options">
-                    {expressionOptions.map((option) => (
-                      <button
-                        type="button"
-                        key={option.text}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => applyExpressionOption(option.text)}
-                      >
-                        <span>{option.text}</span>
-                        {option.note ? <small>{option.note}</small> : null}
-                      </button>
-                    ))}
-                  </div>
-                )}
+          {vaultLocked ? (
+            <section className="vault-locked-panel" aria-label="Private Vault locked">
+              <div className="vault-locked-icon">
+                <Lock size={22} />
               </div>
-            ) : null}
-          </article>
+              <h2>Private Vault is locked</h2>
+              <p>Your drafts are encrypted on this device. Unlock with your passkey to read, edit, export, or use local AI.</p>
+              <button type="button" onClick={() => openVaultModal("unlock")}>
+                Unlock drafts
+              </button>
+            </section>
+          ) : (
+            <article className="editor-paper" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={handleEditorPointerUp}>
+              <EditorContent editor={editor} />
+              {expressionTarget ? (
+                <div
+                  ref={expressionPopoverRef}
+                  className="expression-popover"
+                  role="dialog"
+                  aria-label={`Alternates for ${expressionTarget.text}`}
+                  style={
+                    {
+                      "--expression-left": `${expressionTarget.position.left}px`,
+                      "--expression-top": `${expressionTarget.position.top}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <div className="expression-header">
+                    <div>
+                      <span className="expression-kicker">Alternates</span>
+                      <span className="expression-target">{expressionTarget.text}</span>
+                    </div>
+                    <button type="button" className="expression-close" onClick={closeExpressionPopover} aria-label="Close alternates" title="Close">
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {expressionLoading ? (
+                    <div className="expression-state">
+                      <LoaderCircle className="spin" size={15} />
+                      Thinking locally
+                    </div>
+                  ) : expressionError ? (
+                    <p className="expression-error">{expressionError}</p>
+                  ) : (
+                    <div className="expression-options">
+                      {expressionOptions.map((option) => (
+                        <button
+                          type="button"
+                          key={option.text}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => applyExpressionOption(option.text)}
+                        >
+                          <span>{option.text}</span>
+                          {option.note ? <small>{option.note}</small> : null}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </article>
+          )}
         </div>
 
         <footer className="editor-footer" aria-label="Editor status">
           <div className="editor-footer-metrics" aria-live="polite">
             <span>{wordCount} words</span>
             <span>{charCount} chars</span>
+            <a
+              href="https://github.com/seeARMS/draftside"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="editor-footer-github"
+              aria-label="View source on GitHub"
+              title="View source on GitHub"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+              </svg>
+            </a>
           </div>
         </footer>
       </main>
@@ -3668,6 +4310,168 @@ export default function LocalWriteEditor() {
           </div>
         )}
       </aside>
+      {vaultModalOpen ? (
+        <div
+          className="vault-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !vaultBusy && !vaultRecoveryKey) setVaultModalOpen(false);
+          }}
+        >
+          <div className="vault-dialog" role="dialog" aria-modal="true" aria-labelledby="vault-title">
+            <div className="vault-dialog-header">
+              <div className="vault-dialog-icon" aria-hidden="true">
+                {vaultStatus === "unlocked" ? <LockOpen size={19} /> : <Lock size={19} />}
+              </div>
+              <div>
+                <h2 id="vault-title">
+                  {vaultModalView === "unlock"
+                    ? "Unlock Private Vault"
+                    : vaultModalView === "disable"
+                      ? "Remove encryption?"
+                      : "Private Vault"}
+                </h2>
+                <p>
+                  {vaultModalView === "unlock"
+                    ? "Use your passkey to decrypt drafts stored on this device."
+                    : vaultModalView === "disable"
+                      ? "Draftside will rewrite encrypted drafts as regular local drafts."
+                      : "Encrypt every local draft before it is saved to this browser."}
+                </p>
+              </div>
+            </div>
+
+            {vaultError ? <p className="vault-error">{vaultError}</p> : null}
+
+            {vaultModalView === "intro" ? (
+              <div className="vault-stack">
+                <div className="vault-feature-grid">
+                  <span>
+                    <strong>Passkey unlock</strong>
+                    <em>Touch ID, device PIN, or another passkey method.</em>
+                  </span>
+                  <span>
+                    <strong>Local encryption</strong>
+                    <em>Drafts are encrypted in IndexedDB with AES-GCM.</em>
+                  </span>
+                  <span>
+                    <strong>Offline first</strong>
+                    <em>No account or server is required to unlock drafts.</em>
+                  </span>
+                  <span>
+                    <strong>Recovery key</strong>
+                    <em>Generated once in case the passkey is unavailable.</em>
+                  </span>
+                </div>
+                <p className="vault-note">
+                  Private Vault requires passkey PRF support. If this browser or authenticator cannot provide PRF output, Draftside will leave drafts unencrypted.
+                </p>
+                <div className="vault-actions">
+                  <button type="button" className="vault-secondary" onClick={() => setVaultModalOpen(false)} disabled={vaultBusy}>
+                    Cancel
+                  </button>
+                  <button type="button" className="vault-primary" onClick={() => void enableVault()} disabled={vaultBusy}>
+                    {vaultBusy ? <LoaderCircle className="spin" size={15} /> : <Lock size={15} />}
+                    Enable Private Vault
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {vaultModalView === "unlock" ? (
+              <div className="vault-stack">
+                <button type="button" className="vault-primary vault-full-button" onClick={() => void unlockVaultWithPasskey()} disabled={vaultBusy}>
+                  {vaultBusy ? <LoaderCircle className="spin" size={15} /> : <LockOpen size={15} />}
+                  Unlock with passkey
+                </button>
+
+                {vaultMeta?.recoveryWrappedKey ? (
+                  <div className="vault-recovery-unlock">
+                    <label htmlFor="vault-recovery-input">Recovery key</label>
+                    <textarea
+                      id="vault-recovery-input"
+                      value={vaultRecoveryInput}
+                      onChange={(event) => setVaultRecoveryInput(event.target.value)}
+                      placeholder="xxxx-xxxx-xxxx..."
+                      rows={3}
+                      disabled={vaultBusy}
+                    />
+                    <button type="button" className="vault-secondary" onClick={() => void unlockVaultWithRecoveryKey()} disabled={vaultBusy || !vaultRecoveryInput.trim()}>
+                      Unlock with recovery key
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {vaultModalView === "manage" ? (
+              <div className="vault-stack">
+                {vaultRecoveryKey ? (
+                  <div className="vault-recovery-card">
+                    <strong>Save this recovery key now</strong>
+                    <code>{vaultRecoveryKey}</code>
+                    <p>Draftside will not show this key again. Store it somewhere private before closing this dialog.</p>
+                    <div className="vault-actions">
+                      <button type="button" className="vault-secondary" onClick={() => void writeClipboardText(vaultRecoveryKey)} disabled={vaultBusy}>
+                        Copy key
+                      </button>
+                      <button type="button" className="vault-primary" onClick={() => setVaultRecoveryKey("")} disabled={vaultBusy}>
+                        I saved it
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="vault-feature-grid">
+                      <span>
+                        <strong>Status</strong>
+                        <em>{vaultStatus === "unlocked" ? "unlocked on this tab" : vaultStatus}</em>
+                      </span>
+                      <span>
+                        <strong>Protected drafts</strong>
+                        <em>{sessions.length}</em>
+                      </span>
+                      <span>
+                        <strong>Saved as</strong>
+                        <em>encrypted records</em>
+                      </span>
+                      <span>
+                        <strong>Recovery</strong>
+                        <em>{vaultMeta?.recoveryWrappedKey ? "enabled" : "not set"}</em>
+                      </span>
+                    </div>
+                    <div className="vault-actions">
+                      <button type="button" className="vault-secondary" onClick={() => void lockVault()} disabled={vaultBusy}>
+                        Lock now
+                      </button>
+                      <button type="button" className="vault-danger" onClick={() => setVaultModalView("disable")} disabled={vaultBusy}>
+                        Remove encryption
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {vaultModalView === "disable" ? (
+              <div className="vault-stack">
+                <p className="vault-note">
+                  This keeps your drafts on this device, but rewrites them as plaintext local records. You can enable Private Vault again later.
+                </p>
+                <div className="vault-actions">
+                  <button type="button" className="vault-secondary" onClick={() => setVaultModalView("manage")} disabled={vaultBusy}>
+                    Back
+                  </button>
+                  <button type="button" className="vault-danger" onClick={() => void disableVault()} disabled={vaultBusy}>
+                    {vaultBusy ? <LoaderCircle className="spin" size={15} /> : <LockOpen size={15} />}
+                    Remove encryption
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {deleteTarget ? (
         <div
           className="confirm-overlay"
