@@ -184,6 +184,8 @@ const structuredData = JSON.stringify([
         inset: 5.75rem max(-3vw, -3rem) auto auto;
         width: min(58rem, 68vw);
         height: min(36rem, 60svh);
+        display: flex;
+        flex-direction: column;
         border: 1px solid rgba(212, 212, 216, 0.78);
         border-radius: 0.85rem;
         background: rgba(255, 255, 255, 0.96);
@@ -202,6 +204,7 @@ const structuredData = JSON.stringify([
       }
 
       .editor-chrome {
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         gap: 0.7rem;
@@ -211,6 +214,12 @@ const structuredData = JSON.stringify([
         font-family: var(--font-geist-mono);
         font-size: 0.7rem;
         color: rgba(113, 113, 122, 0.95);
+      }
+
+      .editor-body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
       }
 
       .dark .editor-chrome {
@@ -247,11 +256,12 @@ const structuredData = JSON.stringify([
       }
 
       .draft-body {
-        padding: 3rem 3.5rem 2rem;
-        max-width: 38rem;
+        flex: 1;
+        padding: 2.75rem 3rem 2rem;
         color: rgba(24, 24, 27, 0.92);
-        font-size: clamp(1rem, 1.3vw, 1.2rem);
+        font-size: clamp(0.98rem, 1.2vw, 1.15rem);
         line-height: 1.85;
+        overflow: hidden;
       }
 
       .dark .draft-body {
@@ -297,22 +307,72 @@ const structuredData = JSON.stringify([
         color: rgba(212, 212, 216, 0.85);
       }
 
-      .classification {
-        position: absolute;
-        right: 1.5rem;
-        bottom: 1.5rem;
-        width: 15.5rem;
-        padding: 0.95rem 1.1rem;
-        border: 1px solid rgba(228, 228, 231, 0.85);
-        border-radius: 0.6rem;
-        background: rgba(250, 250, 251, 0.94);
-        font-family: var(--font-geist-mono);
-        backdrop-filter: blur(6px);
+      .ai-inspector {
+        flex-shrink: 0;
+        width: 16.5rem;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid rgba(228, 228, 231, 0.78);
+        background: rgba(250, 250, 251, 0.65);
       }
 
-      .dark .classification {
-        border-color: rgba(63, 63, 70, 0.92);
-        background: rgba(39, 39, 42, 0.82);
+      .dark .ai-inspector {
+        border-color: rgba(63, 63, 70, 0.9);
+        background: rgba(39, 39, 42, 0.45);
+      }
+
+      .ai-actions {
+        list-style: none;
+        margin: 0;
+        padding: 0.9rem 0.55rem;
+        border-bottom: 1px solid rgba(228, 228, 231, 0.78);
+        font-family: var(--font-geist-mono);
+        font-size: 0.72rem;
+      }
+
+      .dark .ai-actions {
+        border-color: rgba(63, 63, 70, 0.9);
+      }
+
+      .ai-actions li {
+        padding: 0.38rem 0.7rem;
+        border-radius: 0.35rem;
+        color: rgba(113, 113, 122, 0.92);
+        letter-spacing: -0.005em;
+      }
+
+      .dark .ai-actions li {
+        color: rgba(161, 161, 170, 0.9);
+      }
+
+      .ai-actions li.active {
+        position: relative;
+        background: rgba(244, 244, 245, 0.96);
+        color: rgba(24, 24, 27, 0.95);
+        font-weight: 500;
+      }
+
+      .ai-actions li.active::after {
+        content: "";
+        position: absolute;
+        right: 0.7rem;
+        top: 50%;
+        width: 0.35rem;
+        height: 0.35rem;
+        border-radius: 999px;
+        background: #22c55e;
+        transform: translateY(-50%);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+      }
+
+      .dark .ai-actions li.active {
+        background: rgba(63, 63, 70, 0.7);
+        color: rgba(244, 244, 245, 0.96);
+      }
+
+      .classification {
+        padding: 1rem 1.15rem 1.1rem;
+        font-family: var(--font-geist-mono);
       }
 
       .classification dl {
@@ -362,18 +422,47 @@ const structuredData = JSON.stringify([
           margin-top: 2.5rem;
         }
 
+        .editor-body {
+          flex-direction: column;
+        }
+
         .draft-body {
           padding: 2rem 1.75rem 1.5rem;
-          max-width: 100%;
           font-size: 1rem;
         }
 
+        .ai-inspector {
+          width: 100%;
+          border-left: none;
+          border-top: 1px solid rgba(228, 228, 231, 0.78);
+        }
+
+        .dark .ai-inspector {
+          border-color: rgba(63, 63, 70, 0.9);
+        }
+
+        .ai-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+          padding: 0.75rem 1rem;
+        }
+
+        .ai-actions li {
+          padding: 0.3rem 0.6rem;
+          border: 1px solid rgba(228, 228, 231, 0.78);
+        }
+
+        .dark .ai-actions li {
+          border-color: rgba(63, 63, 70, 0.9);
+        }
+
+        .ai-actions li.active::after {
+          right: 0.4rem;
+        }
+
         .classification {
-          position: relative;
-          right: auto;
-          bottom: auto;
-          width: auto;
-          margin: 0 1.5rem 1.5rem;
+          padding: 0.85rem 1rem 1rem;
         }
 
         .editor-badge {
@@ -419,19 +508,31 @@ const structuredData = JSON.stringify([
               <span class="editor-filename">draftside &middot; untitled.md</span>
               <span class="editor-badge">offline &middot; on-device</span>
             </div>
-            <div class="draft-body">
-              <strong>Notes toward the thing I mean</strong>
-              <p>
-                Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class="ghost-text"> and offers the next few words.</span><span class="ghost-key">tab</span>
-              </p>
-            </div>
-            <div class="classification">
-              <dl>
-                <dt>form</dt><dd>notes</dd>
-                <dt>intent</dt><dd>drafting</dd>
-                <dt>stance</dt><dd>tentative</dd>
-                <dt>friction</dt><dd>finding the thread</dd>
-              </dl>
+            <div class="editor-body">
+              <div class="draft-body">
+                <strong>Notes toward the thing I mean</strong>
+                <p>
+                  Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class="ghost-text"> and offers the next few words.</span><span class="ghost-key">tab</span>
+                </p>
+              </div>
+              <aside class="ai-inspector">
+                <ul class="ai-actions">
+                  <li>Continue</li>
+                  <li>Rewrite</li>
+                  <li class="active">Classify</li>
+                  <li>Translate</li>
+                  <li>Chat</li>
+                  <li>Transcribe</li>
+                </ul>
+                <div class="classification">
+                  <dl>
+                    <dt>form</dt><dd>notes</dd>
+                    <dt>intent</dt><dd>drafting</dd>
+                    <dt>stance</dt><dd>tentative</dd>
+                    <dt>friction</dt><dd>finding the thread</dd>
+                  </dl>
+                </div>
+              </aside>
             </div>
           </div>
 

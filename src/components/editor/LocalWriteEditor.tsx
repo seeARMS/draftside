@@ -22,6 +22,7 @@ import {
   Download,
   Ellipsis,
   FileText,
+  Focus,
   Heading1,
   Heading2,
   Highlighter,
@@ -135,7 +136,7 @@ const CHAT_RESPONSE_CONSTRAINT: Record<string, unknown> = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type AiStatus = Availability | "idle" | "checking" | "creating" | "unsupported" | "error";
-type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "express" | "chat" | "transcribe" | "translate" | null;
+type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "chat" | "transcribe" | "translate" | null;
 type AiTab = "chat" | "tools";
 type ThemeMode = "light" | "dark";
 type ChatRole = "user" | "assistant";
@@ -147,6 +148,7 @@ interface EditorUiPrefs {
   aiSidebarOpen?: boolean;
   aiTab?: AiTab;
   chatInput?: string;
+  focusMode?: boolean;
   translationTarget?: string;
 }
 
@@ -1145,6 +1147,7 @@ function readStoredUiPrefs(): EditorUiPrefs {
       aiSidebarOpen: typeof parsed.aiSidebarOpen === "boolean" ? parsed.aiSidebarOpen : undefined,
       aiTab: parsed.aiTab === "chat" || parsed.aiTab === "tools" ? parsed.aiTab : undefined,
       chatInput: typeof parsed.chatInput === "string" ? parsed.chatInput : undefined,
+      focusMode: typeof parsed.focusMode === "boolean" ? parsed.focusMode : undefined,
       translationTarget:
         typeof parsed.translationTarget === "string" && TRANSLATION_LANGUAGES.some((language) => language.code === parsed.translationTarget)
           ? parsed.translationTarget
@@ -1277,8 +1280,10 @@ export default function LocalWriteEditor() {
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [copiedPostMarkdown, setCopiedPostMarkdown] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<WriteSession | null>(null);
   const [aiSidebarOpen, setAiSidebarOpen] = useState(() => readStoredUiPrefs().aiSidebarOpen ?? true);
   const [aiTab, setAiTab] = useState<AiTab>(() => readStoredUiPrefs().aiTab ?? "chat");
+  const [focusMode, setFocusMode] = useState(() => readStoredUiPrefs().focusMode ?? false);
   const [expressionTarget, setExpressionTarget] = useState<ExpressionTarget | null>(null);
   const [expressionOptions, setExpressionOptions] = useState<ExpressionOption[]>([]);
   const [expressionLoading, setExpressionLoading] = useState(false);
@@ -1469,6 +1474,10 @@ export default function LocalWriteEditor() {
   useEffect(() => {
     writeStoredUiPrefs({ aiTab });
   }, [aiTab]);
+
+  useEffect(() => {
+    writeStoredUiPrefs({ focusMode });
+  }, [focusMode]);
 
   useEffect(() => {
     writeStoredUiPrefs({ chatInput });
@@ -1709,6 +1718,20 @@ export default function LocalWriteEditor() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [postMenuOpen]);
+
+  useEffect(() => {
+    if (!deleteTarget) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDeleteTarget(null);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [deleteTarget]);
 
   useEffect(() => {
     if (!expressionTarget) return;
@@ -2675,7 +2698,6 @@ export default function LocalWriteEditor() {
     setExpressionOptions([]);
     setExpressionLoading(false);
     setExpressionError("");
-    setAiAction((current) => (current === "express" ? null : current));
   }, []);
 
   const requestExpressionOptions = useCallback(
@@ -2688,7 +2710,6 @@ export default function LocalWriteEditor() {
       setExpressionOptions([]);
       setExpressionError("");
       setExpressionLoading(true);
-      setAiAction("express");
 
       try {
         const docSize = editor.state.doc.content.size;
@@ -2717,7 +2738,6 @@ export default function LocalWriteEditor() {
       } finally {
         if (expressionRequestRef.current === requestId) {
           setExpressionLoading(false);
-          setAiAction((current) => (current === "express" ? null : current));
         }
       }
     },
@@ -2783,21 +2803,32 @@ export default function LocalWriteEditor() {
     setChatError("");
   }, []);
 
-  const deleteActiveSession = useCallback(async () => {
-    if (!activeSession) return;
-
+  const requestDeleteSession = useCallback((session: WriteSession) => {
     setPostMenuOpen(false);
-    await removeSession(activeSession.id);
-    const remaining = sessions.filter((session) => session.id !== activeSession.id);
+    setDeleteTarget(session);
+  }, []);
+
+  const confirmDeleteSession = useCallback(async () => {
+    if (!deleteTarget) return;
+
+    const deletingActiveSession = activeSession?.id === deleteTarget.id;
+    setPostMenuOpen(false);
+    await removeSession(deleteTarget.id);
+    const remaining = sessions.filter((session) => session.id !== deleteTarget.id);
+    setDeleteTarget(null);
 
     if (remaining.length) {
       setSessions(remaining);
-      setActiveSession(remaining[0]);
-      activeSessionRef.current = remaining[0];
-      storeActiveSessionId(remaining[0].id);
-      setLastSavedAt(remaining[0].updatedAt);
-      setSaveState("idle");
-      setChatError("");
+
+      if (deletingActiveSession) {
+        setActiveSession(remaining[0]);
+        activeSessionRef.current = remaining[0];
+        storeActiveSessionId(remaining[0].id);
+        setLastSavedAt(remaining[0].updatedAt);
+        setSaveState("idle");
+        setChatError("");
+      }
+
       return;
     }
 
@@ -2810,7 +2841,7 @@ export default function LocalWriteEditor() {
     setLastSavedAt(blank.updatedAt);
     setSaveState("saved");
     setChatError("");
-  }, [activeSession, sessions]);
+  }, [activeSession?.id, deleteTarget, sessions]);
 
   const getCurrentDoc = useCallback(() => {
     return editor?.getJSON() ?? activeSession?.content ?? EMPTY_DOC;
@@ -2884,9 +2915,11 @@ export default function LocalWriteEditor() {
     </button>
   );
 
+  const appClassName = ["editor-app", aiSidebarOpen ? "is-ai-open" : "", focusMode ? "is-focus-mode" : ""].filter(Boolean).join(" ");
+
   return (
-    <div className={aiSidebarOpen ? "editor-app is-ai-open" : "editor-app"}>
-      <aside className="session-rail" aria-label="Writing sessions">
+    <div className={appClassName}>
+      <aside className="session-rail" aria-label="Writing sessions" aria-hidden={focusMode}>
         <div className="rail-header">
           <div className="rail-title-block">
             <p className="eyebrow">Draftside</p>
@@ -2901,18 +2934,32 @@ export default function LocalWriteEditor() {
 
         <div className="session-list">
           {sessions.map((session) => (
-            <button
-              type="button"
+            <div
               key={session.id}
-              className={activeSession?.id === session.id ? "session-button is-active" : "session-button"}
-              onClick={() => selectSession(session)}
-              disabled={chatPending}
+              className={activeSession?.id === session.id ? "session-item is-active" : "session-item"}
             >
-              <span className="session-title">{session.title}</span>
-              <span className="session-meta">
-                {session.wordCount} words · {formatUpdatedAt(session.updatedAt)}
-              </span>
-            </button>
+              <button
+                type="button"
+                className={activeSession?.id === session.id ? "session-button is-active" : "session-button"}
+                onClick={() => selectSession(session)}
+                disabled={chatPending}
+              >
+                <span className="session-title">{session.title}</span>
+                <span className="session-meta">
+                  {session.wordCount} words · {formatUpdatedAt(session.updatedAt)}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="session-delete-button"
+                onClick={() => requestDeleteSession(session)}
+                disabled={chatPending}
+                aria-label={`Delete ${session.title || "Untitled"}`}
+                title="Delete draft"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           ))}
         </div>
 
@@ -3219,6 +3266,16 @@ export default function LocalWriteEditor() {
           </button>
           <button
             type="button"
+            className={focusMode ? "icon-button is-active" : "icon-button"}
+            onClick={() => setFocusMode((enabled) => !enabled)}
+            aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
+            aria-pressed={focusMode}
+            title={focusMode ? "Exit focus mode" : "Focus mode"}
+          >
+            <Focus size={17} />
+          </button>
+          <button
+            type="button"
             className={aiSidebarOpen ? "icon-button is-active" : "icon-button"}
             onClick={() => setAiSidebarOpen((open) => !open)}
             aria-label={aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar"}
@@ -3254,7 +3311,13 @@ export default function LocalWriteEditor() {
                   {copiedPostMarkdown ? <Check size={16} /> : <Copy size={16} />}
                   {copiedPostMarkdown ? "Copied Markdown" : "Copy as Markdown"}
                 </button>
-                <button type="button" role="menuitem" className="post-menu-item is-danger" onClick={deleteActiveSession} disabled={chatPending || !activeSession}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="post-menu-item is-danger"
+                  onClick={() => activeSession && requestDeleteSession(activeSession)}
+                  disabled={chatPending || !activeSession}
+                >
                   <Trash2 size={16} />
                   Delete draft
                 </button>
@@ -3324,7 +3387,7 @@ export default function LocalWriteEditor() {
         </footer>
       </main>
 
-      <aside id="draftside-ai-rail" className="ai-rail" aria-label="Local AI" aria-hidden={!aiSidebarOpen}>
+      <aside id="draftside-ai-rail" className="ai-rail" aria-label="Local AI" aria-hidden={focusMode || !aiSidebarOpen}>
         <div className="ai-top">
           <div className="ai-header">
             <div>
@@ -3605,6 +3668,35 @@ export default function LocalWriteEditor() {
           </div>
         )}
       </aside>
+      {deleteTarget ? (
+        <div
+          className="confirm-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDeleteTarget(null);
+          }}
+        >
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-draft-title" aria-describedby="delete-draft-description">
+            <div className="confirm-icon" aria-hidden="true">
+              <Trash2 size={18} />
+            </div>
+            <div className="confirm-copy">
+              <h2 id="delete-draft-title">Delete draft?</h2>
+              <p id="delete-draft-description">
+                Delete "{deleteTarget.title || "Untitled"}" from this browser. This cannot be undone.
+              </p>
+            </div>
+            <div className="confirm-actions">
+              <button type="button" className="confirm-secondary" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button type="button" className="confirm-danger" onClick={() => void confirmDeleteSession()} disabled={chatPending}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
