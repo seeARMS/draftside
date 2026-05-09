@@ -17,6 +17,7 @@ Most AI writing tools send your drafts to someone else's server. Draftside doesn
 - **Translate** — on-device translation between supported languages
 - **Chat** — ask the local model questions about your draft, with optional image attachments
 - **Transcribe** — dictate via the multimodal Prompt API
+- **Private Vault** — passkey-encrypted drafts via WebAuthn PRF, unlocked with Touch ID, Windows Hello, or a hardware key
 - **Persistent local drafts** — stored in IndexedDB, never uploaded
 - **Installable PWA** — works fully offline once the model is cached
 

@@ -55,10 +55,11 @@ const structuredData = JSON.stringify([
       "Ghost sentence completions accepted with Tab",
       "Inline alternate wording suggestions",
       "Draft classification: form, intent, stance, friction, next move",
+      "Private Vault: passkey-encrypted drafts via WebAuthn PRF",
       "Persistent local drafts in browser storage",
       "Installable as a progressive web app",
     ],
-    keywords: "open source writing editor, offline AI writing, local-first writing app, Gemini Nano writing tool, Chrome built-in AI editor, on-device AI writing, private drafting tool",
+    keywords: "open source writing editor, offline AI writing, local-first writing app, Gemini Nano writing tool, Chrome built-in AI editor, on-device AI writing, private drafting tool, passkey encrypted notes, WebAuthn PRF vault",
   },
 ]);
 ---
@@ -581,6 +582,10 @@ const structuredData = JSON.stringify([
               <div>
                 <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Suggestions, not interruptions</h3>
                 <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Pause briefly and Draftside offers a faint continuation. Highlight a phrase to swap in alternate wording. Tab to accept, keep typing to ignore.</p>
+              </div>
+              <div class="sm:col-span-2">
+                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">A vault, sealed to your passkey</h3>
+                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Move sensitive drafts into a Private Vault encrypted on this device. Touch ID, Windows Hello, or a hardware key unlocks them. There's no password to phish, no key on a server, and a one-time recovery code in case you lose the device.</p>
               </div>
             </div>
           </div>
