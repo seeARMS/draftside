@@ -76,6 +76,40 @@ const LANGUAGE_MODEL_OPTIONS: LanguageModelCreateCoreOptions = {
 const MULTIMODAL_SYSTEM_PROMPT =
   "You are Draftside, a private on-device writing partner inside a minimal editor. Be concise, concrete, and useful. Never claim network access. Prefer the writer's voice over generic advice.";
 
+const TRANSLATION_LANGUAGES = [
+  { code: "ar", label: "Arabic" },
+  { code: "bg", label: "Bulgarian" },
+  { code: "bn", label: "Bengali" },
+  { code: "cs", label: "Czech" },
+  { code: "da", label: "Danish" },
+  { code: "de", label: "German" },
+  { code: "el", label: "Greek" },
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "fi", label: "Finnish" },
+  { code: "fr", label: "French" },
+  { code: "hi", label: "Hindi" },
+  { code: "hr", label: "Croatian" },
+  { code: "hu", label: "Hungarian" },
+  { code: "id", label: "Indonesian" },
+  { code: "it", label: "Italian" },
+  { code: "ja", label: "Japanese" },
+  { code: "ko", label: "Korean" },
+  { code: "nl", label: "Dutch" },
+  { code: "no", label: "Norwegian" },
+  { code: "pl", label: "Polish" },
+  { code: "pt", label: "Portuguese" },
+  { code: "ro", label: "Romanian" },
+  { code: "ru", label: "Russian" },
+  { code: "sv", label: "Swedish" },
+  { code: "th", label: "Thai" },
+  { code: "tr", label: "Turkish" },
+  { code: "uk", label: "Ukrainian" },
+  { code: "vi", label: "Vietnamese" },
+  { code: "zh", label: "Chinese" },
+  { code: "zh-Hant", label: "Chinese Traditional" },
+];
+
 const CHAT_RESPONSE_CONSTRAINT: Record<string, unknown> = {
   type: "object",
   properties: {
@@ -101,7 +135,7 @@ const CHAT_RESPONSE_CONSTRAINT: Record<string, unknown> = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type AiStatus = Availability | "idle" | "checking" | "creating" | "unsupported" | "error";
-type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "express" | "chat" | "transcribe" | null;
+type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "express" | "chat" | "transcribe" | "translate" | null;
 type AiTab = "chat" | "tools";
 type ThemeMode = "light" | "dark";
 type ChatRole = "user" | "assistant";
@@ -113,6 +147,7 @@ interface EditorUiPrefs {
   aiSidebarOpen?: boolean;
   aiTab?: AiTab;
   chatInput?: string;
+  translationTarget?: string;
 }
 
 interface DraftUpdate {
@@ -163,6 +198,7 @@ interface Capabilities {
   rewriter: boolean;
   writer: boolean;
   detector: boolean;
+  translator: boolean;
 }
 
 interface ModelRuntimeInfo {
@@ -1094,6 +1130,10 @@ function capabilityClass(enabled: boolean) {
   return enabled ? "capability-pill is-on" : "capability-pill";
 }
 
+function translationLabel(code: string) {
+  return TRANSLATION_LANGUAGES.find((language) => language.code === code)?.label ?? code;
+}
+
 function readStoredUiPrefs(): EditorUiPrefs {
   try {
     const stored = localStorage.getItem(UI_PREFS_KEY);
@@ -1105,6 +1145,10 @@ function readStoredUiPrefs(): EditorUiPrefs {
       aiSidebarOpen: typeof parsed.aiSidebarOpen === "boolean" ? parsed.aiSidebarOpen : undefined,
       aiTab: parsed.aiTab === "chat" || parsed.aiTab === "tools" ? parsed.aiTab : undefined,
       chatInput: typeof parsed.chatInput === "string" ? parsed.chatInput : undefined,
+      translationTarget:
+        typeof parsed.translationTarget === "string" && TRANSLATION_LANGUAGES.some((language) => language.code === parsed.translationTarget)
+          ? parsed.translationTarget
+          : undefined,
     };
   } catch {
     return {};
@@ -1212,6 +1256,7 @@ export default function LocalWriteEditor() {
     rewriter: false,
     writer: false,
     detector: false,
+    translator: false,
   });
   const [modelInfo, setModelInfo] = useState<ModelRuntimeInfo>({ loading: false });
   const [offlineInfo, setOfflineInfo] = useState<OfflineRuntimeInfo>({
@@ -1226,6 +1271,9 @@ export default function LocalWriteEditor() {
   const [aiOutput, setAiOutput] = useState("");
   const [aiError, setAiError] = useState("");
   const [detectedLanguage, setDetectedLanguage] = useState("");
+  const [translationTarget, setTranslationTarget] = useState(() => readStoredUiPrefs().translationTarget ?? "es");
+  const [translationSource, setTranslationSource] = useState("");
+  const [lastTranslation, setLastTranslation] = useState("");
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [copiedPostMarkdown, setCopiedPostMarkdown] = useState(false);
@@ -1427,6 +1475,10 @@ export default function LocalWriteEditor() {
   }, [chatInput]);
 
   useEffect(() => {
+    writeStoredUiPrefs({ translationTarget });
+  }, [translationTarget]);
+
+  useEffect(() => {
     setOnline(navigator.onLine);
 
     const onOnline = () => setOnline(true);
@@ -1566,6 +1618,7 @@ export default function LocalWriteEditor() {
         rewriter: "Rewriter" in globalThis,
         writer: "Writer" in globalThis,
         detector: "LanguageDetector" in globalThis,
+        translator: "Translator" in globalThis,
       };
 
       if (!mounted) return;
@@ -2357,6 +2410,104 @@ export default function LocalWriteEditor() {
     [capabilities.detector],
   );
 
+  const detectSourceLanguage = useCallback(
+    async (text: string) => {
+      if (!capabilities.detector || !text.trim()) return "en";
+
+      try {
+        const availability = await LanguageDetector.availability();
+        if (availability === "unavailable") return "en";
+
+        const detector = await LanguageDetector.create({
+          monitor(monitor) {
+            monitor.addEventListener("downloadprogress", (event) => {
+              if (event.loaded <= 1) setAiProgress(event.loaded);
+            });
+          },
+        });
+        const [first] = await detector.detect(text.slice(0, 1600));
+        detector.destroy();
+
+        const detected = first?.detectedLanguage || "en";
+        const confidence = typeof first?.confidence === "number" ? ` ${Math.round(first.confidence * 100)}%` : "";
+        setDetectedLanguage(`${detected}${confidence}`);
+        return detected;
+      } catch {
+        return "en";
+      }
+    },
+    [capabilities.detector],
+  );
+
+  const translateDraft = useCallback(async () => {
+    const text = getModelText();
+    if (!text) {
+      setAiError("Write or select some text first.");
+      return;
+    }
+
+    if (!capabilities.translator) {
+      setAiError("Chrome Translator API is unavailable in this browser.");
+      return;
+    }
+
+    setAiAction("translate");
+    setAiError("");
+    setAiOutput("");
+    setLastTranslation("");
+
+    try {
+      const detectedSource = await detectSourceLanguage(text);
+      const sourceLanguage = detectedSource;
+      setTranslationSource(sourceLanguage);
+
+      if (sourceLanguage === translationTarget) {
+        setAiOutput(text);
+        setLastTranslation(text);
+        return;
+      }
+
+      const options: TranslatorCreateOptions = {
+        sourceLanguage,
+        targetLanguage: translationTarget,
+        monitor(monitor) {
+          monitor.addEventListener("downloadprogress", (event) => {
+            const progress =
+              event.lengthComputable && event.total > 0
+                ? event.loaded / event.total
+                : event.loaded <= 1
+                  ? event.loaded
+                  : 0;
+            setAiProgress(Math.max(0, Math.min(1, progress)));
+          });
+        },
+      };
+
+      const availability = await Translator.availability(options);
+      if (availability === "unavailable") {
+        throw new Error(`Local translation from ${translationLabel(sourceLanguage)} to ${translationLabel(translationTarget)} is unavailable.`);
+      }
+
+      const translator = await Translator.create(options);
+      const translated = await translator.translate(text);
+      translator.destroy();
+
+      setAiProgress(null);
+      setLastTranslation(translated);
+      setAiOutput(translated);
+    } catch (error) {
+      setAiProgress(null);
+      setAiError(error instanceof Error ? error.message : "Translation failed.");
+    } finally {
+      setAiAction(null);
+    }
+  }, [capabilities.translator, detectSourceLanguage, getModelText, translationTarget]);
+
+  const applyTranslation = useCallback(() => {
+    if (!lastTranslation.trim() || selection.empty) return;
+    replaceSelectionOrInsert(lastTranslation);
+  }, [lastTranslation, replaceSelectionOrInsert, selection.empty]);
+
   const classifyDraft = useCallback(async () => {
     const text = getModelText();
     if (!text) {
@@ -2932,10 +3083,11 @@ export default function LocalWriteEditor() {
 
                   <span className="model-popover-capabilities">
                     <span className={capabilityClass(capabilities.prompt)}>prompt</span>
-                    <span className={capabilityClass(capabilities.rewriter)}>rewrite</span>
-                    <span className={capabilityClass(capabilities.writer)}>write</span>
-                    <span className={capabilityClass(capabilities.detector)}>language</span>
-                  </span>
+                  <span className={capabilityClass(capabilities.rewriter)}>rewrite</span>
+                  <span className={capabilityClass(capabilities.writer)}>write</span>
+                  <span className={capabilityClass(capabilities.detector)}>language</span>
+                  <span className={capabilityClass(capabilities.translator)}>translate</span>
+                </span>
 
                   <span className="model-popover-note">
                     Inference stays on-device. Draftside requests English text in and out; storage is {storagePersisted ? "persistent" : "browser-managed"}.
@@ -3331,6 +3483,7 @@ export default function LocalWriteEditor() {
               <span className={capabilityClass(capabilities.rewriter)}>rewrite</span>
               <span className={capabilityClass(capabilities.writer)}>write</span>
               <span className={capabilityClass(capabilities.detector)}>language</span>
+              <span className={capabilityClass(capabilities.translator)}>translate</span>
             </div>
 
             <div className="ai-actions">
@@ -3354,6 +3507,40 @@ export default function LocalWriteEditor() {
                 <Wand2 size={16} />
                 Tighten
               </button>
+            </div>
+
+            <div className="ai-section translate-section">
+              <div className="section-title">
+                <span>Translate</span>
+                {translationSource ? (
+                  <span className="language-pill">
+                    <Languages size={13} />
+                    {translationLabel(translationSource)} → {translationLabel(translationTarget)}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="translate-control">
+                <label htmlFor="translation-target">To</label>
+                <select id="translation-target" value={translationTarget} onChange={(event) => setTranslationTarget(event.target.value)} disabled={aiAction !== null}>
+                  {TRANSLATION_LANGUAGES.map((language) => (
+                    <option key={language.code} value={language.code}>
+                      {language.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="translate-actions">
+                <button type="button" onClick={translateDraft} disabled={aiAction !== null || !capabilities.translator || !activeText}>
+                  {aiAction === "translate" ? <LoaderCircle className="spin" size={15} /> : <Languages size={15} />}
+                  Translate {selection.empty ? "draft" : "selection"}
+                </button>
+                <button type="button" onClick={applyTranslation} disabled={selection.empty || !lastTranslation.trim() || aiAction !== null}>
+                  <Check size={15} />
+                  Replace selection
+                </button>
+              </div>
             </div>
 
             <div className="ai-section">
