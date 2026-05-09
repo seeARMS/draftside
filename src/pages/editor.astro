@@ -1,0 +1,54 @@
+---
+import "@fontsource-variable/geist/index.css";
+import "@fontsource/dm-mono/400.css";
+import "@fontsource/dm-mono/500.css";
+import LocalWriteEditor from "../components/editor/LocalWriteEditor";
+import PwaRegistration from "../components/PwaRegistration.astro";
+import "../styles/global.css";
+import "../styles/editor.css";
+
+const pageTitle = "Draftside";
+const pageDescription =
+  "A private offline writing editor powered by TipTap and Chrome built-in Gemini Nano.";
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/localwrite.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/localwrite-180.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)" />
+    <meta name="application-name" content={pageTitle} />
+    <meta name="apple-mobile-web-app-title" content={pageTitle} />
+    <meta name="description" content={pageDescription} />
+    <meta name="robots" content="noindex, nofollow" />
+    <script is:inline>
+      (() => {
+        const applyTheme = (theme) => {
+          document.documentElement.classList.toggle("dark", theme === "dark");
+          document.documentElement.classList.toggle("light", theme === "light");
+          document.documentElement.style.colorScheme = theme;
+        };
+
+        try {
+          const stored = localStorage.getItem("draftside.theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = stored === "light" || stored === "dark" ? stored : prefersDark ? "dark" : "light";
+          applyTheme(theme);
+        } catch {
+          applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        }
+      })();
+    </script>
+    <title>{pageTitle}</title>
+    <PwaRegistration />
+  </head>
+  <body class="editor-page">
+    <LocalWriteEditor client:only="react" />
+  </body>
+</html>

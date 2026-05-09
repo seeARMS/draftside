@@ -1,0 +1,42 @@
+---
+const enableServiceWorker = import.meta.env.PROD;
+---
+
+<script is:inline define:vars={{ enableServiceWorker }}>
+  if ("serviceWorker" in navigator && enableServiceWorker) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
+        // Offline support is progressive; the editor still works without registration.
+      });
+    });
+  } else if ("serviceWorker" in navigator) {
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    const clearServiceWorkers = navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        if (registration.scope === `${window.location.origin}/`) {
+          registration.unregister();
+        }
+      });
+    });
+
+    const clearCaches =
+      "caches" in window
+        ? caches.keys().then((keys) =>
+            Promise.all(
+              keys
+                .filter((key) => key.startsWith("localwrite-") || key.startsWith("draftside-"))
+                .map((key) => caches.delete(key)),
+            ),
+          )
+        : Promise.resolve();
+
+    if (hadController && sessionStorage.getItem("localwrite.devSwRefresh") !== "done") {
+      sessionStorage.setItem("localwrite.devSwRefresh", "done");
+      Promise.allSettled([clearServiceWorkers, clearCaches]).then(() => {
+        window.location.reload();
+      });
+    } else if (!hadController) {
+      sessionStorage.removeItem("localwrite.devSwRefresh");
+    }
+  }
+</script>

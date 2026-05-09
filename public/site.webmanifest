@@ -1,0 +1,26 @@
+{
+  "name": "Draftside",
+  "short_name": "Draftside",
+  "description": "A private offline writing editor powered by TipTap and Chrome built-in Gemini Nano.",
+  "start_url": "/editor",
+  "scope": "/",
+  "icons": [
+    { "src": "localwrite.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "localwrite-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "localwrite-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "localwrite-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Open editor",
+      "short_name": "Editor",
+      "url": "/editor",
+      "icons": [{ "src": "localwrite-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
