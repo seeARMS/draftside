@@ -60,6 +60,7 @@ const DB_VERSION = 1;
 const SESSION_STORE = "sessions";
 const ACTIVE_SESSION_KEY = "localwrite.activeSessionId";
 const THEME_KEY = "draftside.theme";
+const UI_PREFS_KEY = "draftside.uiPrefs";
 const MAX_MODEL_CHARS = 6500;
 
 const EMPTY_DOC: JSONContent = {
@@ -106,6 +107,13 @@ type ThemeMode = "light" | "dark";
 type ChatRole = "user" | "assistant";
 type RecordingTarget = "chat" | "editor";
 type MultimodalInputType = "audio" | "image";
+
+interface EditorUiPrefs {
+  activeSessionId?: string;
+  aiSidebarOpen?: boolean;
+  aiTab?: AiTab;
+  chatInput?: string;
+}
 
 interface DraftUpdate {
   text: string;
@@ -1086,6 +1094,49 @@ function capabilityClass(enabled: boolean) {
   return enabled ? "capability-pill is-on" : "capability-pill";
 }
 
+function readStoredUiPrefs(): EditorUiPrefs {
+  try {
+    const stored = localStorage.getItem(UI_PREFS_KEY);
+    if (!stored) return {};
+
+    const parsed = JSON.parse(stored) as Partial<EditorUiPrefs>;
+    return {
+      activeSessionId: typeof parsed.activeSessionId === "string" ? parsed.activeSessionId : undefined,
+      aiSidebarOpen: typeof parsed.aiSidebarOpen === "boolean" ? parsed.aiSidebarOpen : undefined,
+      aiTab: parsed.aiTab === "chat" || parsed.aiTab === "tools" ? parsed.aiTab : undefined,
+      chatInput: typeof parsed.chatInput === "string" ? parsed.chatInput : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredUiPrefs(next: EditorUiPrefs) {
+  try {
+    const current = readStoredUiPrefs();
+    localStorage.setItem(UI_PREFS_KEY, JSON.stringify({ ...current, ...next }));
+  } catch {
+    // UI preferences are progressive; the editor still works without them.
+  }
+}
+
+function storeActiveSessionId(id: string) {
+  try {
+    localStorage.setItem(ACTIVE_SESSION_KEY, id);
+  } catch {
+    // The consolidated prefs write below may still succeed in normal browsers.
+  }
+  writeStoredUiPrefs({ activeSessionId: id });
+}
+
+function readStoredActiveSessionId() {
+  try {
+    return localStorage.getItem(ACTIVE_SESSION_KEY) ?? readStoredUiPrefs().activeSessionId;
+  } catch {
+    return readStoredUiPrefs().activeSessionId;
+  }
+}
+
 function multimodalKey(inputTypes: MultimodalInputType[]) {
   return [...new Set(inputTypes)].sort().join("+");
 }
@@ -1178,15 +1229,15 @@ export default function LocalWriteEditor() {
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [copiedPostMarkdown, setCopiedPostMarkdown] = useState(false);
-  const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
-  const [aiTab, setAiTab] = useState<AiTab>("chat");
+  const [aiSidebarOpen, setAiSidebarOpen] = useState(() => readStoredUiPrefs().aiSidebarOpen ?? true);
+  const [aiTab, setAiTab] = useState<AiTab>(() => readStoredUiPrefs().aiTab ?? "chat");
   const [expressionTarget, setExpressionTarget] = useState<ExpressionTarget | null>(null);
   const [expressionOptions, setExpressionOptions] = useState<ExpressionOption[]>([]);
   const [expressionLoading, setExpressionLoading] = useState(false);
   const [expressionError, setExpressionError] = useState("");
   const [completionTick, setCompletionTick] = useState(0);
   const [ghostCompletionText, setGhostCompletionText] = useState("");
-  const [chatInput, setChatInput] = useState("");
+  const [chatInput, setChatInput] = useState(() => readStoredUiPrefs().chatInput ?? "");
   const [chatImages, setChatImages] = useState<ChatImageAttachment[]>([]);
   const [recordingTarget, setRecordingTarget] = useState<RecordingTarget | null>(null);
   const [chatError, setChatError] = useState("");
@@ -1364,6 +1415,18 @@ export default function LocalWriteEditor() {
   }, [theme]);
 
   useEffect(() => {
+    writeStoredUiPrefs({ aiSidebarOpen });
+  }, [aiSidebarOpen]);
+
+  useEffect(() => {
+    writeStoredUiPrefs({ aiTab });
+  }, [aiTab]);
+
+  useEffect(() => {
+    writeStoredUiPrefs({ chatInput });
+  }, [chatInput]);
+
+  useEffect(() => {
     setOnline(navigator.onLine);
 
     const onOnline = () => setOnline(true);
@@ -1391,7 +1454,7 @@ export default function LocalWriteEditor() {
           nextSessions = [blank];
         }
 
-        const activeId = localStorage.getItem(ACTIVE_SESSION_KEY);
+        const activeId = readStoredActiveSessionId();
         const selected = nextSessions.find((session) => session.id === activeId) ?? nextSessions[0];
 
         if (!mounted) return;
@@ -1399,7 +1462,7 @@ export default function LocalWriteEditor() {
         setActiveSession(selected);
         activeSessionRef.current = selected;
         setLastSavedAt(selected.updatedAt);
-        localStorage.setItem(ACTIVE_SESSION_KEY, selected.id);
+        storeActiveSessionId(selected.id);
       } catch {
         const blank = createBlankSession();
         if (!mounted) return;
@@ -1425,7 +1488,7 @@ export default function LocalWriteEditor() {
   useEffect(() => {
     if (!editor || !activeSession) return;
 
-    localStorage.setItem(ACTIVE_SESSION_KEY, activeSession.id);
+    storeActiveSessionId(activeSession.id);
     skipUpdateRef.current = true;
     editor.commands.setContent(activeSession.content);
     window.queueMicrotask(() => {
@@ -2550,6 +2613,7 @@ export default function LocalWriteEditor() {
     setSessions((previous) => [blank, ...previous]);
     setActiveSession(blank);
     activeSessionRef.current = blank;
+    storeActiveSessionId(blank.id);
     setLastSavedAt(blank.updatedAt);
     setSaveState("saved");
     setAiOutput("");
@@ -2560,6 +2624,7 @@ export default function LocalWriteEditor() {
   const selectSession = useCallback((session: WriteSession) => {
     setActiveSession(session);
     activeSessionRef.current = session;
+    storeActiveSessionId(session.id);
     setLastSavedAt(session.updatedAt);
     setSaveState("idle");
     setAiOutput("");
@@ -2578,6 +2643,7 @@ export default function LocalWriteEditor() {
       setSessions(remaining);
       setActiveSession(remaining[0]);
       activeSessionRef.current = remaining[0];
+      storeActiveSessionId(remaining[0].id);
       setLastSavedAt(remaining[0].updatedAt);
       setSaveState("idle");
       setChatError("");
@@ -2589,6 +2655,7 @@ export default function LocalWriteEditor() {
     setSessions([blank]);
     setActiveSession(blank);
     activeSessionRef.current = blank;
+    storeActiveSessionId(blank.id);
     setLastSavedAt(blank.updatedAt);
     setSaveState("saved");
     setChatError("");
