@@ -414,13 +414,14 @@ const structuredData = JSON.stringify([
         border-color: rgba(63, 63, 70, 0.86);
       }
 
-      @media (max-width: 900px) {
+      @media (max-width: 1023.98px) {
         .product-field {
           position: relative;
           inset: auto;
           width: 100%;
+          max-width: 40rem;
           height: auto;
-          margin-top: 2.5rem;
+          margin: 2.5rem auto 0;
         }
 
         .editor-body {
@@ -480,7 +481,7 @@ const structuredData = JSON.stringify([
             <img src="/localwrite-192.png" alt="" width="28" height="28" class="size-7 rounded-md" />
             Draftside
           </a>
-          <div class="flex items-center gap-5 text-zinc-500 dark:text-zinc-400">
+          <div class="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 sm:gap-5">
             <a href="/editor" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Editor</a>
             <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">GitHub</a>
             <button
@@ -502,7 +503,27 @@ const structuredData = JSON.stringify([
       </nav>
 
       <main>
-        <section class="relative overflow-hidden px-6 pb-14 pt-14 md:min-h-[82svh] md:pb-20 md:pt-20">
+        <section class="relative overflow-hidden px-6 pb-14 pt-12 sm:pt-14 md:pb-20 md:pt-20 lg:min-h-[82svh]">
+          <div class="relative z-10 mx-auto max-w-6xl">
+            <div class="max-w-2xl">
+              <p class="mb-5 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Open source · 100% offline · Local AI</p>
+              <h1 class="text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-zinc-950 text-balance dark:text-zinc-50 sm:text-6xl md:text-7xl">
+                Draftside
+              </h1>
+              <p class="mt-6 max-w-[38rem] text-base leading-7 text-zinc-600 text-pretty dark:text-zinc-400 sm:text-lg sm:leading-8">
+                An open source writing editor that runs entirely in your browser. Chrome's built-in Gemini Nano powers inline completions, rewrites, alternate phrasing, and draft classification &mdash; all on your device. No account. No API key. No server.
+              </p>
+              <div class="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row">
+                <a href="/editor" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
+                  Open the editor
+                </a>
+                <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900 sm:w-auto">
+                  View on GitHub
+                </a>
+              </div>
+            </div>
+          </div>
+
           <div class="product-field" aria-hidden="true">
             <div class="editor-chrome">
               <span class="editor-dot"></span>
@@ -534,26 +555,6 @@ const structuredData = JSON.stringify([
                   </dl>
                 </div>
               </aside>
-            </div>
-          </div>
-
-          <div class="relative z-10 mx-auto max-w-6xl">
-            <div class="max-w-2xl">
-              <p class="mb-5 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Open source · 100% offline · Local AI</p>
-              <h1 class="text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-zinc-950 text-balance dark:text-zinc-50 sm:text-6xl md:text-7xl">
-                Draftside
-              </h1>
-              <p class="mt-6 max-w-[38rem] text-lg leading-8 text-zinc-600 text-pretty dark:text-zinc-400">
-                An open source writing editor that runs entirely in your browser. Chrome's built-in Gemini Nano powers inline completions, rewrites, alternate phrasing, and draft classification &mdash; all on your device. No account. No API key. No server.
-              </p>
-              <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-                <a href="/editor" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200">
-                  Open the editor
-                </a>
-                <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900">
-                  View on GitHub
-                </a>
-              </div>
             </div>
           </div>
         </section>
@@ -598,7 +599,7 @@ const structuredData = JSON.stringify([
               <p class="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
                 Draftside is built for notes, essays, posts, and any draft that benefits from a second pass without leaving the writing flow. Open source, no account, runs in your browser. Open it and start typing.
               </p>
-              <a href="/editor" class="mt-7 inline-flex min-h-11 items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200">
+              <a href="/editor" class="mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
                 Start drafting
               </a>
             </div>
