@@ -514,3 +514,39 @@
   line-height: 1rem;
   white-space: nowrap;
 }
+
+.expression-footer {
+  display: flex;
+  justify-content: stretch;
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+  border-top: 1px solid hsl(var(--border) / 0.7);
+}
+
+.expression-action {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0 0.625rem;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.1rem;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.expression-action:hover:not(:disabled) {
+  background: hsl(var(--muted));
+}
+
+.expression-action:disabled {
+  cursor: default;
+  opacity: 0.55;
+}

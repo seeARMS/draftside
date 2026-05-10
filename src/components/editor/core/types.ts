@@ -2,8 +2,9 @@ import type { JSONContent } from "@tiptap/core";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type AiStatus = Availability | "idle" | "checking" | "creating" | "unsupported" | "error";
-type AiAction = "prepare" | "classify" | "think" | "continue" | "rewrite" | "chat" | "transcribe" | "translate" | null;
+type AiAction = "rewrite" | "chat" | "transcribe" | "translate" | null;
 type AiTab = "chat" | "tools";
+type AmbientStatus = "off" | "idle" | "tentative" | "stale" | "thinking" | "ready" | "error";
 type ThemeMode = "light" | "dark";
 type ChatRole = "user" | "assistant";
 type RecordingTarget = "chat" | "editor";
@@ -17,6 +18,7 @@ interface EditorUiPrefs {
   aiTab?: AiTab;
   chatInput?: string;
   focusMode?: boolean;
+  liveAnalysis?: boolean;
   translationTarget?: string;
 }
 
@@ -49,6 +51,9 @@ interface Classification {
   nextMove: string;
   confidence: number;
   tags: string[];
+  observation?: string;
+  fingerprint?: string;
+  updatedAt?: number;
 }
 
 interface WriteSession {
@@ -168,6 +173,7 @@ export type {
   AiAction,
   AiStatus,
   AiTab,
+  AmbientStatus,
   Capabilities,
   ChatImageAttachment,
   ChatMessage,

@@ -4,7 +4,6 @@ import { VaultDialog } from "./components/VaultDialog";
 import {
   ArrowUp,
   Bold,
-  Brain,
   Check,
   Code2,
   Copy,
@@ -28,15 +27,16 @@ import {
   Mic,
   MicOff,
   Moon,
+  Pause,
   PanelRightClose,
   PanelRightOpen,
+  Play,
   Plus,
   Quote,
   Redo2,
   Save,
   Sparkles,
   Sun,
-  Tags,
   Trash2,
   Underline as UnderlineIcon,
   Undo2,
@@ -55,6 +55,7 @@ import {
   TRANSLATION_LANGUAGES,
   asModelContentValue,
   base64UrlToBytes,
+  buildAmbientPrompt,
   buildChatPrompt,
   buildMultimodalOptions,
   bytesToBase64Url,
@@ -75,6 +76,7 @@ import {
   escapeHtml,
   expressionTargetFromSelection,
   fileSafeTitle,
+  fingerprintText,
   formatBytes,
   formatModelInfoTime,
   formatNumber,
@@ -90,8 +92,8 @@ import {
   hexToBytes,
   importAesKey,
   multimodalKey,
+  parseAmbientResponse,
   parseChatResponse,
-  parseClassification,
   parseExpressionOptions,
   promptChatModel,
   putSession,
@@ -117,6 +119,7 @@ import {
   type AiAction,
   type AiStatus,
   type AiTab,
+  type AmbientStatus,
   type Capabilities,
   type ChatImageAttachment,
   type ChatMessage,
@@ -146,6 +149,16 @@ type ActiveTooltip = {
   size?: "wide";
   x: number;
   y: number;
+};
+
+type PwaInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+const isStandalonePwa = () => {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(display-mode: standalone)").matches || ("standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
 };
 
 export default function LocalWriteEditor() {
@@ -197,6 +210,8 @@ export default function LocalWriteEditor() {
   const [aiSidebarOpen, setAiSidebarOpen] = useState(() => readStoredUiPrefs().aiSidebarOpen ?? true);
   const [aiTab, setAiTab] = useState<AiTab>(() => readStoredUiPrefs().aiTab ?? "chat");
   const [focusMode, setFocusMode] = useState(() => readStoredUiPrefs().focusMode ?? false);
+  const [liveAnalysisEnabled, setLiveAnalysisEnabled] = useState(() => readStoredUiPrefs().liveAnalysis ?? true);
+  const [ambientStatus, setAmbientStatus] = useState<AmbientStatus>("idle");
   const [vaultMeta, setVaultMeta] = useState<VaultMeta | null>(initialVaultMeta);
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>(initialVaultMeta ? "locked" : "disabled");
   const [vaultModalOpen, setVaultModalOpen] = useState(false);
@@ -216,10 +231,16 @@ export default function LocalWriteEditor() {
   const [recordingTarget, setRecordingTarget] = useState<RecordingTarget | null>(null);
   const [chatError, setChatError] = useState("");
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltip | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<PwaInstallPromptEvent | null>(null);
+  const [pwaInstalled, setPwaInstalled] = useState(() => isStandalonePwa());
 
   const saveTimerRef = useRef<number | null>(null);
   const completionTimerRef = useRef<number | null>(null);
   const completionRequestRef = useRef(0);
+  const ambientTimerRef = useRef<number | null>(null);
+  const ambientRequestRef = useRef(0);
+  const ambientAbortRef = useRef<AbortController | null>(null);
+  const ambientFingerprintRef = useRef<string>("");
   const activeSessionRef = useRef<WriteSession | null>(null);
   const languageModelRef = useRef<LanguageModel | null>(null);
   const vaultKeyRef = useRef<CryptoKey | null>(null);
@@ -353,6 +374,10 @@ export default function LocalWriteEditor() {
   }, [activeSession]);
 
   useEffect(() => {
+    ambientFingerprintRef.current = activeSession?.classification?.fingerprint ?? "";
+  }, [activeSession?.id, activeSession?.classification?.fingerprint]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.documentElement.classList.toggle("light", theme === "light");
     document.documentElement.style.colorScheme = theme;
@@ -394,6 +419,33 @@ export default function LocalWriteEditor() {
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    setPwaInstalled(isStandalonePwa());
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      if (!isStandalonePwa()) setInstallPrompt(event as PwaInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setPwaInstalled(true);
+    };
+
+    const standaloneQuery = window.matchMedia("(display-mode: standalone)");
+    const handleDisplayModeChange = () => setPwaInstalled(isStandalonePwa());
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    standaloneQuery.addEventListener?.("change", handleDisplayModeChange);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      standaloneQuery.removeEventListener?.("change", handleDisplayModeChange);
     };
   }, []);
 
@@ -676,6 +728,19 @@ export default function LocalWriteEditor() {
   const wordCount = editor ? countWords(editor.getText()) : activeSession?.wordCount ?? 0;
   const charCount = editor?.storage.characterCount.characters() ?? activeSession?.plainText.length ?? 0;
   const currentClassification = activeSession?.classification;
+  const ambientStatusLabel = !liveAnalysisEnabled
+    ? "Live analysis paused"
+    : ambientStatus === "thinking"
+      ? "Reading the draft…"
+      : ambientStatus === "stale"
+        ? "Catching up…"
+        : ambientStatus === "tentative"
+          ? "Tentative — too early"
+          : ambientStatus === "ready"
+            ? "Caught up"
+            : ambientStatus === "error"
+              ? "Could not read"
+              : "Waiting for text";
   const chatMessages = activeSession?.chatMessages ?? [];
   const chatPending = aiAction === "chat";
   const vaultLocked = vaultStatus === "locked";
@@ -691,6 +756,9 @@ export default function LocalWriteEditor() {
       : null;
   const modelUnsupported = aiStatus === "unsupported" || modelInfo.availability === "unsupported";
   const modelUnavailable = aiStatus === "unavailable" || modelInfo.availability === "unavailable";
+  const offlineReady = offlineInfo.controlled;
+  const offlineBadgeLabel = offlineReady ? "offline ready" : online ? "online" : "offline";
+  const installStatusLabel = pwaInstalled ? "installed" : installPrompt ? "ready" : offlineReady ? "browser menu" : "setting up";
 
   const refreshModelInfo = useCallback(async () => {
     if (!("LanguageModel" in globalThis)) {
@@ -784,6 +852,24 @@ export default function LocalWriteEditor() {
       checkedAt: Date.now(),
     });
   }, []);
+
+  const installDraftside = useCallback(async () => {
+    if (pwaInstalled) return;
+
+    if (!installPrompt) {
+      void refreshOfflineInfo();
+      return;
+    }
+
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === "accepted") setPwaInstalled(true);
+    } finally {
+      setInstallPrompt(null);
+      void refreshOfflineInfo();
+    }
+  }, [installPrompt, pwaInstalled, refreshOfflineInfo]);
 
   useEffect(() => {
     void refreshOfflineInfo();
@@ -1313,17 +1399,13 @@ export default function LocalWriteEditor() {
     };
   }, [aiAction, capabilities.prompt, completionTick, editor, ensureLanguageModel, expressionTarget, postMenuOpen, selection.empty, vaultLocked]);
 
-  const prepareModel = useCallback(async () => {
-    setAiAction("prepare");
-    try {
-      await ensureLanguageModel();
-      setAiOutput("Local model ready.");
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Could not start the local model.");
-    } finally {
-      setAiAction(null);
-    }
-  }, [ensureLanguageModel]);
+  const toggleLiveAnalysis = useCallback(() => {
+    setLiveAnalysisEnabled((previous) => {
+      const next = !previous;
+      writeStoredUiPrefs({ liveAnalysis: next });
+      return next;
+    });
+  }, []);
 
   const detectLanguage = useCallback(
     async (text: string) => {
@@ -1351,6 +1433,121 @@ export default function LocalWriteEditor() {
     },
     [capabilities.detector],
   );
+
+  const runAmbientPass = useCallback(
+    async (text: string, fingerprint: string) => {
+      const requestId = ambientRequestRef.current + 1;
+      ambientRequestRef.current = requestId;
+
+      ambientAbortRef.current?.abort();
+      const controller = new AbortController();
+      ambientAbortRef.current = controller;
+
+      setAmbientStatus("thinking");
+
+      void detectLanguage(text);
+
+      try {
+        const model = await ensureLanguageModel();
+        if (controller.signal.aborted || ambientRequestRef.current !== requestId) return;
+
+        const result = await model.prompt(
+          [{ role: "user", content: buildAmbientPrompt(truncateForModel(text, 4800)) }],
+          { signal: controller.signal },
+        );
+
+        if (controller.signal.aborted || ambientRequestRef.current !== requestId) return;
+
+        const next: Classification = {
+          ...parseAmbientResponse(result),
+          fingerprint,
+          updatedAt: Date.now(),
+        };
+
+        const current = activeSessionRef.current;
+        if (!current) {
+          setAmbientStatus("idle");
+          return;
+        }
+
+        const updated: WriteSession = { ...current, classification: next, updatedAt: Date.now() };
+        activeSessionRef.current = updated;
+        setActiveSession(updated);
+        setSessions((previous) => [updated, ...previous.filter((session) => session.id !== updated.id)].sort((a, b) => b.updatedAt - a.updatedAt));
+        ambientFingerprintRef.current = fingerprint;
+        setAmbientStatus("ready");
+
+        try {
+          await saveSession(updated);
+        } catch {
+          // Ambient analysis is best-effort; ignore persistence hiccups.
+        }
+      } catch (error) {
+        if (controller.signal.aborted || ambientRequestRef.current !== requestId) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setAmbientStatus("error");
+      } finally {
+        if (ambientAbortRef.current === controller) {
+          ambientAbortRef.current = null;
+        }
+      }
+    },
+    [detectLanguage, ensureLanguageModel, saveSession],
+  );
+
+  useEffect(() => {
+    if (!liveAnalysisEnabled) {
+      setAmbientStatus("off");
+      ambientAbortRef.current?.abort();
+      ambientAbortRef.current = null;
+      ambientRequestRef.current += 1;
+      if (ambientTimerRef.current) {
+        window.clearTimeout(ambientTimerRef.current);
+        ambientTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (!capabilities.prompt || vaultLocked || !editor) {
+      setAmbientStatus("idle");
+      return;
+    }
+
+    const text = editor.getText().trim();
+    if (!text) {
+      setAmbientStatus("idle");
+      return;
+    }
+    if (text.length < 30) {
+      setAmbientStatus("tentative");
+      return;
+    }
+
+    const fingerprint = fingerprintText(text);
+    if (fingerprint === ambientFingerprintRef.current) {
+      setAmbientStatus("ready");
+      return;
+    }
+
+    if (aiAction !== null) {
+      setAmbientStatus("stale");
+      return;
+    }
+
+    setAmbientStatus("stale");
+    if (ambientTimerRef.current) window.clearTimeout(ambientTimerRef.current);
+    ambientTimerRef.current = window.setTimeout(() => {
+      ambientTimerRef.current = null;
+      void runAmbientPass(text, fingerprint);
+    }, 1500);
+
+    return () => {
+      if (ambientTimerRef.current) {
+        window.clearTimeout(ambientTimerRef.current);
+        ambientTimerRef.current = null;
+      }
+    };
+  }, [liveAnalysisEnabled, capabilities.prompt, vaultLocked, editor, completionTick, activeSession?.id, aiAction, runAmbientPass]);
 
   const detectSourceLanguage = useCallback(
     async (text: string) => {
@@ -1449,102 +1646,6 @@ export default function LocalWriteEditor() {
     if (!lastTranslation.trim() || selection.empty) return;
     replaceSelectionOrInsert(lastTranslation);
   }, [lastTranslation, replaceSelectionOrInsert, selection.empty]);
-
-  const classifyDraft = useCallback(async () => {
-    const text = getModelText();
-    if (!text) {
-      setAiError("Write a little first.");
-      return;
-    }
-
-    setAiAction("classify");
-    setAiError("");
-    setAiOutput("");
-
-    try {
-      await detectLanguage(text);
-      const model = await ensureLanguageModel();
-      const result = await model.prompt([
-        {
-          role: "user",
-          content: `Classify this draft for the writer. Return exactly one valid compact JSON object and nothing else. Do not use markdown. Do not return multiple objects. Use this exact shape: {"form":"","intent":"","stance":"","friction":"","nextMove":"","confidence":0.0,"tags":[""]}. Keep field values short. Draft:\n\n"""${text}"""`,
-        },
-      ]);
-
-      const classification = parseClassification(result);
-      const current = activeSessionRef.current;
-      if (current) {
-        const next = { ...current, classification, updatedAt: Date.now() };
-        activeSessionRef.current = next;
-        setActiveSession(next);
-        setSessions((previous) => [next, ...previous.filter((session) => session.id !== next.id)].sort((a, b) => b.updatedAt - a.updatedAt));
-        await saveSession(next);
-        setSaveState("saved");
-        setLastSavedAt(Date.now());
-      }
-
-      setAiOutput(classification.nextMove);
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Classification failed.");
-    } finally {
-      setAiAction(null);
-    }
-  }, [detectLanguage, ensureLanguageModel, getModelText, saveSession]);
-
-  const thinkWithDraft = useCallback(async () => {
-    const text = getModelText();
-    if (!text) {
-      setAiError("Write a little first.");
-      return;
-    }
-
-    setAiAction("think");
-    setAiError("");
-    setAiOutput("");
-
-    try {
-      const model = await ensureLanguageModel();
-      const stream = model.promptStreaming([
-        {
-          role: "user",
-          content: `Read this writing and respond with five terse lines: strongest idea, hidden assumption, missing proof, useful question, next sentence. No preamble.\n\n"""${text}"""`,
-        },
-      ]);
-      await readTextStream(stream, setAiOutput);
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Thinking pass failed.");
-    } finally {
-      setAiAction(null);
-    }
-  }, [ensureLanguageModel, getModelText]);
-
-  const continueDraft = useCallback(async () => {
-    const text = truncateForModel(editor?.getText().trim() ?? "", 5200);
-    if (!text) {
-      setAiError("Write a little first.");
-      return;
-    }
-
-    setAiAction("continue");
-    setAiError("");
-    setAiOutput("");
-
-    try {
-      const model = await ensureLanguageModel();
-      const stream = model.promptStreaming([
-        {
-          role: "user",
-          content: `Continue this draft in the same voice. Return only the next two to four sentences, no heading.\n\n"""${text}"""`,
-        },
-      ]);
-      const result = await readTextStream(stream, setAiOutput);
-      replaceSelectionOrInsert(result.trimStart());
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Continuation failed.");
-    } finally {
-      setAiAction(null);
-    }
-  }, [editor, ensureLanguageModel, replaceSelectionOrInsert]);
 
   const rewriteSelection = useCallback(async () => {
     const text = selection.text.trim();
@@ -2048,11 +2149,8 @@ export default function LocalWriteEditor() {
   });
 
   const aiActionTooltips = {
-    prepare: "Manual warm-up or retry for Chrome's local model. Draftside usually starts this on page load.",
-    classify: "Analyzes the draft's form, intent, stance, friction, tags, and suggested next move.",
-    think: "Runs a critique pass: strongest idea, hidden assumption, missing proof, useful question, and next sentence.",
-    continue: "Writes the next 2-4 sentences in the same voice and inserts them into the draft.",
     tighten: "Rewrites the selected text to be shorter while preserving meaning and voice.",
+    liveAnalysis: "Reads the draft on a debounce and surfaces form, intent, stance, friction, and an observation. Toggle off for battery or quiet typing.",
   };
 
   const showTooltipForElement = useCallback((element: HTMLElement) => {
@@ -2234,11 +2332,31 @@ export default function LocalWriteEditor() {
               ))}
         </div>
 
+        {!pwaInstalled ? (
+          <div className={offlineReady ? "install-banner is-offline-ready" : "install-banner"}>
+            <div className="install-banner-copy">
+              <span className="install-banner-kicker">
+                <Download size={13} />
+                {installStatusLabel}
+              </span>
+              <strong>Install Draftside</strong>
+              <span>Install once and keep writing offline.</span>
+            </div>
+            {installPrompt ? (
+              <button type="button" onClick={() => void installDraftside()}>
+                Install
+              </button>
+            ) : (
+              <span className="install-banner-fallback">Browser menu</span>
+            )}
+          </div>
+        ) : null}
+
         <div className="rail-footer">
           <span className="offline-status-wrap" onMouseEnter={() => void refreshOfflineInfo()} onFocus={() => void refreshOfflineInfo()}>
-            <span className={online ? "connectivity is-online" : "connectivity"} tabIndex={0} aria-describedby="offline-status-popover">
-              {online ? <Wifi size={14} /> : <WifiOff size={14} />}
-              {online ? "online" : "offline"}
+            <span className={offlineReady ? "connectivity is-offline-ready" : online ? "connectivity is-online" : "connectivity"} tabIndex={0} aria-describedby="offline-status-popover">
+              {offlineReady ? <Check size={14} /> : online ? <Wifi size={14} /> : <WifiOff size={14} />}
+              {offlineBadgeLabel}
             </span>
             <span id="offline-status-popover" className="offline-popover" role="tooltip">
               <span className="model-popover-title">
@@ -2281,10 +2399,14 @@ export default function LocalWriteEditor() {
                   <strong>Draft storage</strong>
                   <em>{storagePersisted === null ? "checking" : storagePersisted ? "persistent IndexedDB" : "browser-managed IndexedDB"}</em>
                 </span>
+                <span>
+                  <strong>Install</strong>
+                  <em>{installStatusLabel}</em>
+                </span>
               </span>
 
               <span className="model-popover-note">
-                Production builds register Chrome's service worker at scope /. It precaches / and /editor, the manifest, icons, fonts, and discovered app assets, then runtime-caches same-origin requests. Drafts stay in IndexedDB and Gemini Nano runs locally after Chrome downloads it.
+                Production builds register Chrome's service worker at scope /. It precaches / and /editor, the manifest, icons, fonts, and discovered app assets, then runtime-caches same-origin requests. Install adds a standalone launcher; drafts stay in IndexedDB and Gemini Nano runs locally after Chrome downloads it.
               </span>
               <span className="model-popover-foot">checked {formatModelInfoTime(offlineInfo.checkedAt)}</span>
             </span>
@@ -2666,6 +2788,22 @@ export default function LocalWriteEditor() {
                       ))}
                     </div>
                   )}
+
+                  <div className="expression-footer">
+                    <button
+                      type="button"
+                      className="expression-action"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        void rewriteSelection().finally(() => closeExpressionPopover());
+                      }}
+                      disabled={aiAction !== null}
+                      {...tooltipProps(aiActionTooltips.tighten, "top", "wide")}
+                    >
+                      {aiAction === "rewrite" ? <LoaderCircle className="spin" size={13} /> : <Wand2 size={13} />}
+                      Tighten selection
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </article>
@@ -2854,27 +2992,72 @@ export default function LocalWriteEditor() {
               <span className={capabilityClass(capabilities.translator)}>translate</span>
             </div>
 
-            <div className="ai-actions">
-              <button type="button" onClick={prepareModel} disabled={aiAction !== null || !capabilities.prompt} {...tooltipProps(aiActionTooltips.prepare, "top", "wide")}>
-                <Sparkles size={16} />
-                Prepare
-              </button>
-              <button type="button" onClick={classifyDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText} {...tooltipProps(aiActionTooltips.classify, "top", "wide")}>
-                <Tags size={16} />
-                Classify
-              </button>
-              <button type="button" onClick={thinkWithDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText} {...tooltipProps(aiActionTooltips.think, "top", "wide")}>
-                <Brain size={16} />
-                Think
-              </button>
-              <button type="button" onClick={continueDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText} {...tooltipProps(aiActionTooltips.continue, "top", "wide")}>
-                <FileText size={16} />
-                Continue
-              </button>
-              <button type="button" onClick={rewriteSelection} disabled={aiAction !== null || selection.empty} {...tooltipProps(aiActionTooltips.tighten, "top", "wide")}>
-                <Wand2 size={16} />
-                Tighten
-              </button>
+            <div className="ai-section live-section">
+              <div className="section-title">
+                <span className="live-status">
+                  <span className={`live-dot is-${ambientStatus}`} aria-hidden="true" />
+                  <span>{ambientStatusLabel}</span>
+                </span>
+                <button
+                  type="button"
+                  className="live-toggle"
+                  onClick={toggleLiveAnalysis}
+                  aria-pressed={liveAnalysisEnabled}
+                  {...tooltipProps(aiActionTooltips.liveAnalysis, "left", "wide")}
+                >
+                  {liveAnalysisEnabled ? <Pause size={13} /> : <Play size={13} />}
+                  {liveAnalysisEnabled ? "Pause" : "Resume"}
+                </button>
+              </div>
+
+              {currentClassification ? (
+                <>
+                  {currentClassification.observation ? (
+                    <p className="ambient-observation">{currentClassification.observation}</p>
+                  ) : null}
+                  <dl className="classification-grid">
+                    <div>
+                      <dt>form</dt>
+                      <dd>{currentClassification.form}</dd>
+                    </div>
+                    <div>
+                      <dt>intent</dt>
+                      <dd>{currentClassification.intent}</dd>
+                    </div>
+                    <div>
+                      <dt>stance</dt>
+                      <dd>{currentClassification.stance}</dd>
+                    </div>
+                    <div>
+                      <dt>friction</dt>
+                      <dd>{currentClassification.friction}</dd>
+                    </div>
+                  </dl>
+                  {currentClassification.nextMove ? (
+                    <p className="ambient-next">
+                      <span className="ambient-next-label">try next</span>
+                      <span>{currentClassification.nextMove}</span>
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="muted-line">{liveAnalysisEnabled ? "Keep writing — Draftside reads along." : "Live analysis is paused."}</p>
+              )}
+
+              {currentClassification?.tags?.length ? (
+                <div className="tag-row">
+                  {currentClassification.tags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+              ) : null}
+
+              {detectedLanguage ? (
+                <div className="language-pill self-start">
+                  <Languages size={13} />
+                  {detectedLanguage}
+                </div>
+              ) : null}
             </div>
 
             <div className="ai-section translate-section">
@@ -2909,49 +3092,6 @@ export default function LocalWriteEditor() {
                   Replace selection
                 </button>
               </div>
-            </div>
-
-            <div className="ai-section">
-              <div className="section-title">
-                <span>Signals</span>
-                {detectedLanguage && (
-                  <span className="language-pill">
-                    <Languages size={13} />
-                    {detectedLanguage}
-                  </span>
-                )}
-              </div>
-
-              {currentClassification ? (
-                <dl className="classification-grid">
-                  <div>
-                    <dt>form</dt>
-                    <dd>{currentClassification.form}</dd>
-                  </div>
-                  <div>
-                    <dt>intent</dt>
-                    <dd>{currentClassification.intent}</dd>
-                  </div>
-                  <div>
-                    <dt>stance</dt>
-                    <dd>{currentClassification.stance}</dd>
-                  </div>
-                  <div>
-                    <dt>friction</dt>
-                    <dd>{currentClassification.friction}</dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="muted-line">No classification yet.</p>
-              )}
-
-              {currentClassification?.tags?.length ? (
-                <div className="tag-row">
-                  {currentClassification.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
-              ) : null}
             </div>
 
             <div className="ai-section output-section">

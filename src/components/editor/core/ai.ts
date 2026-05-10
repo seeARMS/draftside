@@ -165,7 +165,52 @@ function normalizeClassification(raw: unknown): Classification {
     nextMove: typeof data.nextMove === "string" ? data.nextMove : "write the next concrete sentence",
     confidence: typeof data.confidence === "number" ? Math.max(0, Math.min(1, data.confidence)) : 0.5,
     tags: Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === "string").slice(0, 5) : [],
+    observation: typeof data.observation === "string" ? data.observation.trim().slice(0, 220) : undefined,
   };
+}
+
+function buildAmbientPrompt(text: string) {
+  return `You are an ambient reader for a writing editor. Read this draft and return one compact JSON object describing it. Be concise and concrete. Avoid generic words like "draft" or "unclear" when you can name something specific. Return exactly one valid JSON object and nothing else. Do not use markdown fences. Use this exact shape: {"form":"","intent":"","stance":"","friction":"","nextMove":"","confidence":0.0,"tags":[""],"observation":""}.
+
+- form: short noun phrase for what kind of writing this is (e.g. "field notes", "argument", "blog post").
+- intent: what the writer seems to want from this draft.
+- stance: the writer's current posture (e.g. "tentative", "advocating", "questioning").
+- friction: the specific thing slowing this draft down right now, in 6 words or fewer.
+- nextMove: a concrete next sentence or move the writer could try.
+- confidence: 0.0 to 1.0, how sure you are.
+- tags: 0 to 4 short topical tags.
+- observation: one terse line describing what you notice in the writing right now (under 30 words). No preamble. No "I notice".
+
+Draft:
+"""${text}"""`;
+}
+
+function parseAmbientResponse(input: string): Classification {
+  const json = extractJsonObject(input);
+
+  if (json) {
+    try {
+      return normalizeClassification(JSON.parse(json));
+    } catch {
+      // Fall through to loose parse so a bad JSON does not kill the ambient pass.
+    }
+  }
+
+  const loose = looseClassification(input);
+  const observationMatch = input.match(/["']?observation["']?\s*[:=]\s*["']([^"']+)["']/i);
+  if (observationMatch?.[1]) {
+    loose.observation = observationMatch[1].trim().slice(0, 220);
+  }
+  return loose;
+}
+
+function fingerprintText(text: string) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash << 5) - hash + text.charCodeAt(i);
+    hash |= 0;
+  }
+  return `${text.length}:${hash}`;
 }
 
 function mergeStreamChunk(previous: string, chunk: string) {
@@ -208,12 +253,15 @@ function asModelContentValue(value: Blob): LanguageModelMessageValue {
 
 export {
   asModelContentValue,
+  buildAmbientPrompt,
   buildChatPrompt,
   buildMultimodalOptions,
+  fingerprintText,
   looseClassification,
   mergeStreamChunk,
   multimodalKey,
   normalizeClassification,
+  parseAmbientResponse,
   parseChatResponse,
   parseClassification,
   promptChatModel,

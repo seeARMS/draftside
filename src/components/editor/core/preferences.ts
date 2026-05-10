@@ -13,6 +13,7 @@ function readStoredUiPrefs(): EditorUiPrefs {
       aiTab: parsed.aiTab === "chat" || parsed.aiTab === "tools" ? parsed.aiTab : undefined,
       chatInput: typeof parsed.chatInput === "string" ? parsed.chatInput : undefined,
       focusMode: typeof parsed.focusMode === "boolean" ? parsed.focusMode : undefined,
+      liveAnalysis: typeof parsed.liveAnalysis === "boolean" ? parsed.liveAnalysis : undefined,
       translationTarget:
         typeof parsed.translationTarget === "string" && TRANSLATION_LANGUAGES.some((language) => language.code === parsed.translationTarget)
           ? parsed.translationTarget
