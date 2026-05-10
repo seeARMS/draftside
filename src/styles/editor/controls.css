@@ -15,6 +15,60 @@
     color 150ms ease-out;
 }
 
+.editor-tooltip {
+  position: fixed;
+  z-index: 1000;
+  top: var(--tooltip-y);
+  left: var(--tooltip-x);
+  display: block;
+  width: max-content;
+  max-width: min(14rem, calc(100vw - 1rem));
+  padding: 0.35rem 0.5rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  box-shadow: 0 10px 28px hsl(var(--foreground) / 0.16);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  pointer-events: none;
+  text-align: center;
+  white-space: normal;
+}
+
+.editor-tooltip.is-wide {
+  max-width: min(18rem, calc(100vw - 1rem));
+  font-weight: 500;
+  line-height: 1.15rem;
+  text-align: left;
+}
+
+.editor-tooltip.is-top,
+.editor-tooltip.is-bottom {
+  left: clamp(7.5rem, var(--tooltip-x), calc(100vw - 7.5rem));
+}
+
+.editor-tooltip.is-wide.is-top,
+.editor-tooltip.is-wide.is-bottom {
+  left: clamp(9.5rem, var(--tooltip-x), calc(100vw - 9.5rem));
+}
+
+.editor-tooltip.is-top {
+  transform: translate(-50%, calc(-100% - 0.5rem));
+}
+
+.editor-tooltip.is-right {
+  transform: translate(0.5rem, -50%);
+}
+
+.editor-tooltip.is-bottom {
+  transform: translate(-50%, 0.5rem);
+}
+
+.editor-tooltip.is-left {
+  transform: translate(calc(-100% - 0.5rem), -50%);
+}
+
 .icon-button {
   width: 2.5rem;
   height: 2.5rem;
@@ -48,8 +102,15 @@
 .tool-button:disabled,
 .mini-icon:disabled,
 .ai-actions button:disabled {
-  pointer-events: none;
+  cursor: default;
   opacity: 0.5;
+}
+
+.icon-button:disabled:hover,
+.tool-button:disabled:hover,
+.mini-icon:disabled:hover {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
 }
 
 .session-list {

@@ -119,6 +119,16 @@ const structuredData = JSON.stringify([
       const THEME_TRANSITION_MS = 240;
       let themeTransitionTimeout;
 
+      if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+        root.classList.add("motion-pending");
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            root.classList.remove("motion-pending");
+            root.classList.add("motion-ready");
+          });
+        });
+      }
+
       updateMode();
       darkModeMediaQuery.addEventListener("change", () => {
         if (localStorage.getItem(THEME_KEY)) return;
@@ -147,6 +157,171 @@ const structuredData = JSON.stringify([
         startThemeTransition();
         window.requestAnimationFrame(updateMode);
       };
+    </script>
+
+    <script is:inline>
+      (function () {
+        const ill = document.querySelector("[data-illustration]");
+        if (!ill) return;
+
+        const body = ill.querySelector("[data-illustration-body]");
+        const panel = ill.querySelector("[data-illustration-panel]");
+        const buttons = Array.from(ill.querySelectorAll("[data-action]"));
+        if (!body || !panel || buttons.length === 0) return;
+
+        const TITLE = "Notes toward the thing I mean";
+
+        const STATES = {
+          continue: {
+            body:
+              "<strong>" + TITLE + "</strong>" +
+              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class=\"ghost-text\"> and offers the next few words.</span><span class=\"ghost-key\">tab</span></p>",
+            panel:
+              "<div class=\"panel-block\"><div class=\"panel-title\">on-device model</div>" +
+              "<div class=\"status-row\"><span class=\"status-dot\"></span><span>Gemini Nano &middot; ready</span></div></div>",
+          },
+          rewrite: {
+            body:
+              "<strong>" + TITLE + "</strong>" +
+              "<p>Start with the rough version. <span class=\"rewrite-old\">Draftside keeps the page quiet</span> <span class=\"rewrite-new\">the page stays still</span> while local AI waits at the edge of the sentence.</p>",
+            panel:
+              "<div class=\"panel-block\"><div class=\"panel-title\">alternate phrasing</div>" +
+              "<ul class=\"alt-list\">" +
+              "<li>tighten the page</li>" +
+              "<li class=\"active\">the page stays still</li>" +
+              "<li>silence the page</li>" +
+              "</ul></div>",
+          },
+          classify: {
+            body:
+              "<strong>" + TITLE + "</strong>" +
+              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence and offers the next few words.</p>",
+            panel:
+              "<div class=\"classification\">" +
+              "<div class=\"panel-title\" style=\"margin-bottom:0.55rem\">signals</div>" +
+              "<dl>" +
+              "<dt>form</dt><dd>notes</dd>" +
+              "<dt>intent</dt><dd>drafting</dd>" +
+              "<dt>stance</dt><dd>tentative</dd>" +
+              "<dt>friction</dt><dd>finding the thread</dd>" +
+              "</dl></div>",
+          },
+          translate: {
+            body:
+              "<strong>Notas hacia lo que quiero decir</strong>" +
+              "<p>Empieza con la versión áspera. Draftside mantiene la página en silencio mientras la IA local espera al borde de la frase y ofrece las siguientes palabras.</p>",
+            panel:
+              "<div class=\"panel-block\"><div class=\"panel-title\">translate</div>" +
+              "<div class=\"lang-row\"><span class=\"lang-pill\">EN</span><span class=\"lang-arrow\">→</span><span class=\"lang-pill\">ES</span></div></div>",
+          },
+          chat: {
+            body:
+              "<strong>" + TITLE + "</strong>" +
+              "<p>Start rough. The page stays quiet while local AI waits at the edge of the sentence.</p>",
+            panel:
+              "<div class=\"panel-block\"><div class=\"panel-title\">local chat</div>" +
+              "<div class=\"chat-thread\">" +
+              "<div class=\"chat-row is-user\">make the opening sharper</div>" +
+              "<div class=\"chat-row is-assistant\">tightened the first line and dropped the qualifier.</div>" +
+              "</div></div>",
+          },
+          transcribe: {
+            body:
+              "<strong>" + TITLE + "</strong>" +
+              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence.<span class=\"transcribe-incoming\"> And one more thing &mdash; this part I'm saying out loud.</span></p>",
+            panel:
+              "<div class=\"panel-block\"><div class=\"panel-title\">voice note</div>" +
+              "<div class=\"rec-row\"><span class=\"rec-dot\"></span><span>00:14 &middot; listening</span>" +
+              "<span class=\"rec-bars\" aria-hidden=\"true\"><span></span><span></span><span></span><span></span><span></span></span>" +
+              "</div></div>",
+          },
+        };
+
+        const order = ["continue", "rewrite", "classify", "translate", "chat", "transcribe"];
+        const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let active = "continue";
+        let userInteracted = false;
+        let hovered = false;
+        let visible = true;
+        let timer = null;
+
+        function setActiveButton(key) {
+          buttons.forEach(function (btn) {
+            const isActive = btn.dataset.action === key;
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+          });
+        }
+
+        function render(key, animate) {
+          const state = STATES[key];
+          if (!state) return;
+          active = key;
+          setActiveButton(key);
+
+          if (!animate) {
+            body.innerHTML = state.body;
+            panel.innerHTML = state.panel;
+            return;
+          }
+
+          body.classList.add("is-fading");
+          panel.classList.add("is-fading");
+          window.setTimeout(function () {
+            body.innerHTML = state.body;
+            panel.innerHTML = state.panel;
+            window.requestAnimationFrame(function () {
+              body.classList.remove("is-fading");
+              panel.classList.remove("is-fading");
+            });
+          }, 180);
+        }
+
+        function tick() {
+          if (userInteracted || hovered || !visible) return;
+          const idx = order.indexOf(active);
+          const next = order[(idx + 1) % order.length];
+          render(next, true);
+        }
+
+        function startCycle() {
+          if (reduceMotion || userInteracted) return;
+          stopCycle();
+          timer = window.setInterval(tick, 3500);
+        }
+
+        function stopCycle() {
+          if (timer !== null) {
+            window.clearInterval(timer);
+            timer = null;
+          }
+        }
+
+        buttons.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            userInteracted = true;
+            stopCycle();
+            render(btn.dataset.action, true);
+          });
+        });
+
+        ill.addEventListener("mouseenter", function () { hovered = true; });
+        ill.addEventListener("mouseleave", function () { hovered = false; });
+        ill.addEventListener("focusin", function () { hovered = true; });
+        ill.addEventListener("focusout", function () { hovered = false; });
+
+        if ("IntersectionObserver" in window) {
+          const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              visible = entry.isIntersecting;
+            });
+          }, { threshold: 0.15 });
+          observer.observe(ill);
+        }
+
+        render("continue", false);
+        startCycle();
+      })();
     </script>
 
     <style is:global>
@@ -181,9 +356,7 @@ const structuredData = JSON.stringify([
       }
 
       .product-field {
-        position: absolute;
-        inset: 5.75rem max(-3vw, -3rem) auto auto;
-        width: min(58rem, 68vw);
+        position: relative;
         height: min(36rem, 60svh);
         display: flex;
         flex-direction: column;
@@ -336,24 +509,51 @@ const structuredData = JSON.stringify([
       }
 
       .ai-actions li {
-        padding: 0.38rem 0.7rem;
-        border-radius: 0.35rem;
-        color: rgba(113, 113, 122, 0.92);
-        letter-spacing: -0.005em;
+        list-style: none;
       }
 
-      .dark .ai-actions li {
+      .ai-actions button {
+        position: relative;
+        display: block;
+        width: 100%;
+        padding: 0.38rem 0.7rem;
+        border-radius: 0.35rem;
+        background: transparent;
+        border: 0;
+        color: rgba(113, 113, 122, 0.92);
+        letter-spacing: -0.005em;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 160ms ease, color 160ms ease;
+      }
+
+      .ai-actions button:hover {
+        background: rgba(244, 244, 245, 0.7);
+        color: rgba(24, 24, 27, 0.95);
+      }
+
+      .ai-actions button:focus-visible {
+        outline: 2px solid rgba(34, 197, 94, 0.55);
+        outline-offset: 1px;
+      }
+
+      .dark .ai-actions button {
         color: rgba(161, 161, 170, 0.9);
       }
 
-      .ai-actions li.active {
-        position: relative;
+      .dark .ai-actions button:hover {
+        background: rgba(63, 63, 70, 0.55);
+        color: rgba(244, 244, 245, 0.96);
+      }
+
+      .ai-actions button.active {
         background: rgba(244, 244, 245, 0.96);
         color: rgba(24, 24, 27, 0.95);
         font-weight: 500;
       }
 
-      .ai-actions li.active::after {
+      .ai-actions button.active::after {
         content: "";
         position: absolute;
         right: 0.7rem;
@@ -366,9 +566,266 @@ const structuredData = JSON.stringify([
         box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
       }
 
-      .dark .ai-actions li.active {
+      .dark .ai-actions button.active {
         background: rgba(63, 63, 70, 0.7);
         color: rgba(244, 244, 245, 0.96);
+      }
+
+      .draft-body,
+      .inspector-panel {
+        transition: opacity 200ms ease;
+      }
+
+      .draft-body.is-fading,
+      .inspector-panel.is-fading {
+        opacity: 0;
+      }
+
+      .rewrite-old {
+        position: relative;
+        color: rgba(161, 161, 170, 0.85);
+        text-decoration: line-through;
+        text-decoration-color: rgba(248, 113, 113, 0.55);
+        text-decoration-thickness: 1.5px;
+      }
+
+      .dark .rewrite-old {
+        color: rgba(161, 161, 170, 0.6);
+      }
+
+      .rewrite-new {
+        background: rgba(34, 197, 94, 0.16);
+        border-radius: 0.25rem;
+        padding: 0 0.28em;
+        color: rgba(22, 101, 52, 0.96);
+      }
+
+      .dark .rewrite-new {
+        background: rgba(34, 197, 94, 0.22);
+        color: rgba(187, 247, 208, 0.95);
+      }
+
+      .transcribe-incoming {
+        color: rgba(22, 101, 52, 0.9);
+        background: rgba(34, 197, 94, 0.1);
+        padding: 0 0.2em;
+        border-radius: 0.2rem;
+      }
+
+      .dark .transcribe-incoming {
+        color: rgba(187, 247, 208, 0.95);
+        background: rgba(34, 197, 94, 0.16);
+      }
+
+      .panel-block {
+        padding: 1rem 1.15rem 1.1rem;
+        font-family: var(--font-geist-mono);
+      }
+
+      .panel-title {
+        color: rgba(113, 113, 122, 0.95);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.6rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .dark .panel-title {
+        color: rgba(161, 161, 170, 0.85);
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.7rem;
+        color: rgba(39, 39, 46, 0.94);
+      }
+
+      .dark .status-row {
+        color: rgba(228, 228, 231, 0.92);
+      }
+
+      .status-row .status-dot {
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+      }
+
+      .alt-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.32rem;
+      }
+
+      .alt-list li {
+        padding: 0.32rem 0.55rem;
+        border-radius: 0.3rem;
+        border: 1px solid rgba(228, 228, 231, 0.85);
+        font-size: 0.68rem;
+        color: rgba(82, 82, 91, 0.96);
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .alt-list li.active {
+        background: rgba(34, 197, 94, 0.14);
+        border-color: rgba(34, 197, 94, 0.45);
+        color: rgba(22, 101, 52, 0.96);
+      }
+
+      .dark .alt-list li {
+        border-color: rgba(63, 63, 70, 0.86);
+        background: rgba(39, 39, 42, 0.6);
+        color: rgba(212, 212, 216, 0.92);
+      }
+
+      .dark .alt-list li.active {
+        background: rgba(34, 197, 94, 0.2);
+        border-color: rgba(34, 197, 94, 0.55);
+        color: rgba(187, 247, 208, 0.95);
+      }
+
+      .lang-row {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.7rem;
+        color: rgba(39, 39, 46, 0.94);
+      }
+
+      .lang-pill {
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        border: 1px solid rgba(228, 228, 231, 0.85);
+        background: rgba(244, 244, 245, 0.7);
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .lang-arrow {
+        color: rgba(113, 113, 122, 0.92);
+      }
+
+      .dark .lang-row {
+        color: rgba(228, 228, 231, 0.92);
+      }
+
+      .dark .lang-pill {
+        border-color: rgba(63, 63, 70, 0.86);
+        background: rgba(63, 63, 70, 0.5);
+      }
+
+      .dark .lang-arrow {
+        color: rgba(161, 161, 170, 0.85);
+      }
+
+      .chat-thread {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        font-size: 0.66rem;
+        line-height: 1.5;
+      }
+
+      .chat-row {
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.55rem;
+        max-width: 92%;
+      }
+
+      .chat-row.is-user {
+        align-self: flex-end;
+        background: rgba(24, 24, 27, 0.94);
+        color: rgba(244, 244, 245, 0.96);
+      }
+
+      .chat-row.is-assistant {
+        align-self: flex-start;
+        background: rgba(244, 244, 245, 0.96);
+        color: rgba(39, 39, 46, 0.94);
+        border: 1px solid rgba(228, 228, 231, 0.7);
+      }
+
+      .dark .chat-row.is-user {
+        background: rgba(244, 244, 245, 0.94);
+        color: rgba(24, 24, 27, 0.96);
+      }
+
+      .dark .chat-row.is-assistant {
+        background: rgba(63, 63, 70, 0.55);
+        color: rgba(228, 228, 231, 0.95);
+        border-color: rgba(82, 82, 91, 0.6);
+      }
+
+      .rec-row {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.7rem;
+        color: rgba(39, 39, 46, 0.94);
+      }
+
+      .dark .rec-row {
+        color: rgba(228, 228, 231, 0.92);
+      }
+
+      .rec-dot {
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 999px;
+        background: #ef4444;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18);
+        animation: rec-pulse 1.6s ease-in-out infinite;
+      }
+
+      .rec-bars {
+        display: inline-flex;
+        align-items: end;
+        gap: 0.18rem;
+        margin-left: auto;
+        height: 0.9rem;
+      }
+
+      .rec-bars span {
+        display: block;
+        width: 0.18rem;
+        background: rgba(239, 68, 68, 0.7);
+        border-radius: 999px;
+        animation: rec-bar 1.1s ease-in-out infinite;
+      }
+
+      .rec-bars span:nth-child(1) { animation-delay: 0s; height: 35%; }
+      .rec-bars span:nth-child(2) { animation-delay: 0.15s; height: 70%; }
+      .rec-bars span:nth-child(3) { animation-delay: 0.3s; height: 50%; }
+      .rec-bars span:nth-child(4) { animation-delay: 0.45s; height: 85%; }
+      .rec-bars span:nth-child(5) { animation-delay: 0.6s; height: 55%; }
+
+      @keyframes rec-pulse {
+        0%, 100% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18); }
+        50% { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.06); }
+      }
+
+      @keyframes rec-bar {
+        0%, 100% { transform: scaleY(0.4); }
+        50% { transform: scaleY(1); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .rec-dot,
+        .rec-bars span {
+          animation: none;
+        }
+
+        .draft-body,
+        .inspector-panel {
+          transition: none;
+        }
       }
 
       .classification {
@@ -414,14 +871,9 @@ const structuredData = JSON.stringify([
         border-color: rgba(63, 63, 70, 0.86);
       }
 
-      @media (max-width: 1023.98px) {
+      @media (max-width: 639.98px) {
         .product-field {
-          position: relative;
-          inset: auto;
-          width: 100%;
-          max-width: 40rem;
           height: auto;
-          margin: 2.5rem auto 0;
         }
 
         .editor-body {
@@ -450,20 +902,21 @@ const structuredData = JSON.stringify([
           padding: 0.75rem 1rem;
         }
 
-        .ai-actions li {
+        .ai-actions button {
           padding: 0.3rem 0.6rem;
           border: 1px solid rgba(228, 228, 231, 0.78);
         }
 
-        .dark .ai-actions li {
+        .dark .ai-actions button {
           border-color: rgba(63, 63, 70, 0.9);
         }
 
-        .ai-actions li.active::after {
+        .ai-actions button.active::after {
           right: 0.4rem;
         }
 
-        .classification {
+        .classification,
+        .panel-block {
           padding: 0.85rem 1rem 1rem;
         }
 
@@ -476,7 +929,7 @@ const structuredData = JSON.stringify([
   <body class="overflow-x-hidden bg-white text-zinc-900 antialiased dark:bg-[#141414] dark:text-zinc-100">
     <div class="page-shell">
       <nav class="relative z-20">
-        <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-sm">
+        <div class="stagger-fade mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-sm">
           <a href="/" class="inline-flex items-center gap-2 font-medium text-zinc-950 transition-opacity hover:opacity-80 dark:text-zinc-50">
             <img src="/localwrite-192.png" alt="" width="28" height="28" class="size-7 rounded-md" />
             Draftside
@@ -503,9 +956,9 @@ const structuredData = JSON.stringify([
       </nav>
 
       <main>
-        <section class="relative overflow-hidden px-6 pb-14 pt-12 sm:pt-14 md:pb-20 md:pt-20 lg:min-h-[82svh]">
-          <div class="relative z-10 mx-auto max-w-6xl">
-            <div class="max-w-2xl">
+        <section class="relative overflow-hidden px-6 pb-14 pt-12 sm:pt-14 md:pb-20 md:pt-20 xl:min-h-[82svh]">
+          <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] xl:gap-6">
+            <div class="stagger-fade-group max-w-2xl">
               <p class="mb-5 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Open source · 100% offline · Local AI</p>
               <h1 class="text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-zinc-950 text-balance dark:text-zinc-50 sm:text-6xl md:text-7xl">
                 Draftside
@@ -517,74 +970,117 @@ const structuredData = JSON.stringify([
                 <a href="/editor" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
                   Open the editor
                 </a>
-                <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900 sm:w-auto">
+                <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900 sm:w-auto">
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 opacity-80" fill="currentColor" aria-hidden="true">
+                    <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-1.92c-3.2.7-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.34.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17.92-.26 1.9-.39 2.88-.39s1.96.13 2.88.39c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.7 5.37-5.27 5.65.41.36.78 1.06.78 2.13v3.16c0 .31.21.66.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
+                  </svg>
                   View on GitHub
                 </a>
               </div>
             </div>
-          </div>
 
-          <div class="product-field" aria-hidden="true">
+            <div class="stagger-fade product-field mx-auto w-full max-w-2xl xl:mx-0 xl:max-w-none" style="--stagger-fade-delay: 240ms;" data-illustration>
             <div class="editor-chrome">
               <span class="editor-dot"></span>
               <span class="editor-filename">draftside &middot; untitled.md</span>
               <span class="editor-badge">offline &middot; on-device</span>
             </div>
             <div class="editor-body">
-              <div class="draft-body">
+              <div class="draft-body" data-illustration-body>
                 <strong>Notes toward the thing I mean</strong>
                 <p>
                   Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class="ghost-text"> and offers the next few words.</span><span class="ghost-key">tab</span>
                 </p>
               </div>
               <aside class="ai-inspector">
-                <ul class="ai-actions">
-                  <li>Continue</li>
-                  <li>Rewrite</li>
-                  <li class="active">Classify</li>
-                  <li>Translate</li>
-                  <li>Chat</li>
-                  <li>Transcribe</li>
+                <ul class="ai-actions" role="tablist" aria-label="Demo: pick a Draftside action">
+                  <li><button type="button" data-action="continue" aria-pressed="true" class="active">Continue</button></li>
+                  <li><button type="button" data-action="rewrite" aria-pressed="false">Rewrite</button></li>
+                  <li><button type="button" data-action="classify" aria-pressed="false">Classify</button></li>
+                  <li><button type="button" data-action="translate" aria-pressed="false">Translate</button></li>
+                  <li><button type="button" data-action="chat" aria-pressed="false">Chat</button></li>
+                  <li><button type="button" data-action="transcribe" aria-pressed="false">Transcribe</button></li>
                 </ul>
-                <div class="classification">
-                  <dl>
-                    <dt>form</dt><dd>notes</dd>
-                    <dt>intent</dt><dd>drafting</dd>
-                    <dt>stance</dt><dd>tentative</dd>
-                    <dt>friction</dt><dd>finding the thread</dd>
-                  </dl>
+                <div class="inspector-panel" data-illustration-panel>
+                  <div class="panel-block">
+                    <div class="panel-title">on-device model</div>
+                    <div class="status-row">
+                      <span class="status-dot"></span>
+                      <span>Gemini Nano &middot; ready</span>
+                    </div>
+                  </div>
                 </div>
               </aside>
             </div>
+          </div>
           </div>
         </section>
 
         <section id="how-it-works" class="px-6 py-16 md:py-20">
           <div class="mx-auto grid max-w-6xl gap-12 md:grid-cols-[0.85fr_1.15fr] md:items-start">
-            <div>
+            <div class="stagger-fade-group">
               <p class="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Why it exists</p>
               <h2 class="mt-4 max-w-md text-3xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50 md:text-4xl">
                 AI help that stays beside the draft, not above it.
               </h2>
             </div>
-            <div class="feature-grid grid gap-8 sm:grid-cols-2">
+            <div class="feature-grid stagger-fade-group grid gap-8 sm:grid-cols-2" style="--stagger-fade-base-delay: 120ms;">
               <div>
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-4 h-9 w-9 text-zinc-400 dark:text-zinc-500">
+                  <path d="M11 27c-3 0-5.5-2.5-5.5-5.5 0-2.6 1.9-4.8 4.4-5.4 0-3.6 3-6.5 6.6-6.5 3 0 5.6 2 6.4 4.7" />
+                  <path d="M27 14.5c3.3.4 5.8 3.2 5.8 6.5 0 1.7-.7 3.3-1.7 4.5" />
+                  <path d="M11 27h17" />
+                  <line x1="9" y1="9" x2="33" y2="33" />
+                </svg>
                 <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">100% offline. Always.</h3>
                 <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Drafts live in your browser's storage. Install Draftside as a PWA and keep writing on a plane, in a tunnel, or anywhere there's no network.</p>
               </div>
               <div>
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-4 h-9 w-9 text-zinc-400 dark:text-zinc-500">
+                  <rect x="11" y="11" width="18" height="18" rx="2" />
+                  <rect x="16" y="16" width="8" height="8" />
+                  <line x1="14" y1="7" x2="14" y2="11" />
+                  <line x1="20" y1="7" x2="20" y2="11" />
+                  <line x1="26" y1="7" x2="26" y2="11" />
+                  <line x1="14" y1="29" x2="14" y2="33" />
+                  <line x1="20" y1="29" x2="20" y2="33" />
+                  <line x1="26" y1="29" x2="26" y2="33" />
+                  <line x1="7" y1="14" x2="11" y2="14" />
+                  <line x1="7" y1="20" x2="11" y2="20" />
+                  <line x1="7" y1="26" x2="11" y2="26" />
+                  <line x1="29" y1="14" x2="33" y2="14" />
+                  <line x1="29" y1="20" x2="33" y2="20" />
+                  <line x1="29" y1="26" x2="33" y2="26" />
+                </svg>
                 <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">On-device Gemini Nano</h3>
                 <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Chrome runs the model on your machine. No API keys, no rate limits, no servers. Your draft never leaves the tab.</p>
               </div>
               <div>
-                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Read your own draft</h3>
-                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Ask the local model to classify what you've written &mdash; its form, intent, stance, and the friction holding it back. A second mind on the page, run locally.</p>
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-4 h-9 w-9 text-zinc-400 dark:text-zinc-500">
+                  <path d="M7 14a4 4 0 0 1 4-4h18a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-8l-5 4v-4h-5a4 4 0 0 1-4-4z" />
+                  <path d="M20 13l1.4 3.1 3.1 1.4-3.1 1.4L20 22l-1.4-3.1-3.1-1.4 3.1-1.4z" />
+                </svg>
+                <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">An assistant, not just autocomplete</h3>
+                <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Chat with the draft, translate selections to another language, transcribe a voice note, or ask the local model to read what you've written and name its form, intent, stance, and friction. Every pass runs in the tab.</p>
               </div>
               <div>
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-4 h-9 w-9 text-zinc-400 dark:text-zinc-500">
+                  <line x1="6" y1="13" x2="22" y2="13" />
+                  <line x1="6" y1="20" x2="16" y2="20" />
+                  <line x1="18" y1="20" x2="34" y2="20" stroke-dasharray="2 2.5" />
+                  <line x1="6" y1="27" x2="14" y2="27" />
+                  <rect x="22" y="25" width="9" height="5" rx="1" />
+                  <line x1="24.5" y1="27.5" x2="28.5" y2="27.5" />
+                </svg>
                 <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">Suggestions, not interruptions</h3>
                 <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Pause briefly and Draftside offers a faint continuation. Highlight a phrase to swap in alternate wording. Tab to accept, keep typing to ignore.</p>
               </div>
               <div class="sm:col-span-2">
+                <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-4 h-9 w-9 text-zinc-400 dark:text-zinc-500">
+                  <path d="M20 6l11.5 4v9c0 6.5-4.5 12-11.5 14-7-2-11.5-7.5-11.5-14v-9z" />
+                  <rect x="16" y="20" width="8" height="6" rx="1" />
+                  <path d="M17.5 20v-2.5a2.5 2.5 0 0 1 5 0V20" />
+                </svg>
                 <h3 class="text-base font-semibold text-zinc-950 dark:text-zinc-50">A vault, sealed to your passkey</h3>
                 <p class="mt-2 leading-7 text-zinc-600 dark:text-zinc-400">Move sensitive drafts into a Private Vault encrypted on this device. Touch ID, Windows Hello, or a hardware key unlocks them. There's no password to phish, no key on a server, and a one-time recovery code in case you lose the device.</p>
               </div>
@@ -594,7 +1090,7 @@ const structuredData = JSON.stringify([
 
         <section class="px-6 pb-24 pt-6 md:pb-28">
           <div class="mx-auto max-w-6xl border-t border-zinc-200 pt-12 dark:border-zinc-800">
-            <div class="max-w-2xl">
+            <div class="stagger-fade-group max-w-2xl" style="--stagger-fade-base-delay: 60ms;">
               <h2 class="text-3xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50">Open a blank page with a useful edge.</h2>
               <p class="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
                 Draftside is built for notes, essays, posts, and any draft that benefits from a second pass without leaving the writing flow. Open source, no account, runs in your browser. Open it and start typing.

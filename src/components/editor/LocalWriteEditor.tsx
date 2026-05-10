@@ -138,6 +138,16 @@ import {
   type WriteSession,
 } from "./editorCore";
 
+type TooltipPlacement = "top" | "right" | "bottom" | "left";
+
+type ActiveTooltip = {
+  label: string;
+  placement: TooltipPlacement;
+  size?: "wide";
+  x: number;
+  y: number;
+};
+
 export default function LocalWriteEditor() {
   const initialVaultMeta = useMemo(() => readVaultMeta(), []);
   const [sessions, setSessions] = useState<WriteSession[]>([]);
@@ -205,6 +215,7 @@ export default function LocalWriteEditor() {
   const [chatImages, setChatImages] = useState<ChatImageAttachment[]>([]);
   const [recordingTarget, setRecordingTarget] = useState<RecordingTarget | null>(null);
   const [chatError, setChatError] = useState("");
+  const [activeTooltip, setActiveTooltip] = useState<ActiveTooltip | null>(null);
 
   const saveTimerRef = useRef<number | null>(null);
   const completionTimerRef = useRef<number | null>(null);
@@ -227,6 +238,7 @@ export default function LocalWriteEditor() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
+  const tooltipTargetRef = useRef<HTMLElement | null>(null);
 
   const saveSession = useCallback((session: WriteSession) => putSession(session, vaultKeyRef.current), []);
 
@@ -2029,6 +2041,107 @@ export default function LocalWriteEditor() {
     window.setTimeout(() => setCopiedOutput(false), 1200);
   }, [aiOutput]);
 
+  const tooltipProps = (label: string, placement: TooltipPlacement = "top", size?: "wide") => ({
+    "data-tooltip": label,
+    "data-tooltip-placement": placement,
+    ...(size ? { "data-tooltip-size": size } : {}),
+  });
+
+  const aiActionTooltips = {
+    prepare: "Manual warm-up or retry for Chrome's local model. Draftside usually starts this on page load.",
+    classify: "Analyzes the draft's form, intent, stance, friction, tags, and suggested next move.",
+    think: "Runs a critique pass: strongest idea, hidden assumption, missing proof, useful question, and next sentence.",
+    continue: "Writes the next 2-4 sentences in the same voice and inserts them into the draft.",
+    tighten: "Rewrites the selected text to be shorter while preserving meaning and voice.",
+  };
+
+  const showTooltipForElement = useCallback((element: HTMLElement) => {
+    const label = element.dataset.tooltip;
+    if (!label) return;
+
+    const placement = (element.dataset.tooltipPlacement as TooltipPlacement | undefined) ?? "top";
+    const size = element.dataset.tooltipSize === "wide" ? "wide" : undefined;
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    setActiveTooltip({
+      label,
+      placement,
+      size,
+      x: placement === "left" ? rect.left : placement === "right" ? rect.right : centerX,
+      y: placement === "top" ? rect.top : placement === "bottom" ? rect.bottom : centerY,
+    });
+  }, []);
+
+  const hideTooltip = useCallback(() => {
+    tooltipTargetRef.current = null;
+    setActiveTooltip(null);
+  }, []);
+
+  const handleTooltipPointerOver = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-tooltip]") : null;
+      if (!target || !event.currentTarget.contains(target)) return;
+
+      tooltipTargetRef.current = target;
+      showTooltipForElement(target);
+    },
+    [showTooltipForElement],
+  );
+
+  const handleTooltipPointerOut = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const current = tooltipTargetRef.current;
+      const next = event.relatedTarget as Node | null;
+      if (current && next && current.contains(next)) return;
+      hideTooltip();
+    },
+    [hideTooltip],
+  );
+
+  const handleTooltipFocus = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-tooltip]") : null;
+      if (!target || !event.currentTarget.contains(target)) return;
+
+      tooltipTargetRef.current = target;
+      showTooltipForElement(target);
+    },
+    [showTooltipForElement],
+  );
+
+  const handleTooltipBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const current = tooltipTargetRef.current;
+      const next = event.relatedTarget as Node | null;
+      if (current && next && current.contains(next)) return;
+      hideTooltip();
+    },
+    [hideTooltip],
+  );
+
+  useEffect(() => {
+    if (!activeTooltip) return;
+
+    const updateTooltipPosition = () => {
+      const target = tooltipTargetRef.current;
+      if (!target?.isConnected) {
+        hideTooltip();
+        return;
+      }
+
+      showTooltipForElement(target);
+    };
+
+    window.addEventListener("resize", updateTooltipPosition);
+    window.addEventListener("scroll", updateTooltipPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateTooltipPosition);
+      window.removeEventListener("scroll", updateTooltipPosition, true);
+    };
+  }, [activeTooltip, hideTooltip, showTooltipForElement]);
+
   const ToolbarButton = ({
     label,
     active = false,
@@ -2046,9 +2159,9 @@ export default function LocalWriteEditor() {
       type="button"
       className={active ? "tool-button is-active" : "tool-button"}
       aria-label={label}
-      title={label}
       disabled={disabled || vaultLocked}
       onClick={onClick}
+      {...tooltipProps(label, "bottom")}
     >
       {children}
     </button>
@@ -2057,7 +2170,14 @@ export default function LocalWriteEditor() {
   const appClassName = ["editor-app", aiSidebarOpen ? "is-ai-open" : "", focusMode ? "is-focus-mode" : ""].filter(Boolean).join(" ");
 
   return (
-    <div className={appClassName}>
+    <div
+      className={appClassName}
+      onPointerOver={handleTooltipPointerOver}
+      onPointerOut={handleTooltipPointerOut}
+      onPointerDown={hideTooltip}
+      onFocus={handleTooltipFocus}
+      onBlur={handleTooltipBlur}
+    >
       <aside className="session-rail" aria-label="Writing sessions" aria-hidden={focusMode}>
         <div className="rail-header">
           <div className="rail-title-block">
@@ -2069,7 +2189,7 @@ export default function LocalWriteEditor() {
                 onClick={createSession}
                 disabled={chatPending || vaultLocked}
                 aria-label="New draft"
-                title={vaultLocked ? "Unlock drafts first" : "New draft"}
+                {...tooltipProps(vaultLocked ? "Unlock drafts first" : "New draft", "right")}
               >
                 <Plus size={17} />
               </button>
@@ -2106,7 +2226,7 @@ export default function LocalWriteEditor() {
                     onClick={() => requestDeleteSession(session)}
                     disabled={chatPending}
                     aria-label={`Delete ${session.title || "Untitled"}`}
-                    title="Delete draft"
+                    {...tooltipProps("Delete draft", "left")}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -2402,7 +2522,7 @@ export default function LocalWriteEditor() {
             onClick={() => void toggleRecording("editor")}
             disabled={vaultLocked || !capabilities.prompt || aiAction !== null || (recordingTarget !== null && recordingTarget !== "editor")}
             aria-label={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
-            title={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
+            {...tooltipProps(recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor", "bottom")}
           >
             {recordingTarget === "editor" ? <MicOff size={17} /> : <Mic size={17} />}
           </button>
@@ -2411,7 +2531,7 @@ export default function LocalWriteEditor() {
             className="icon-button"
             onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            {...tooltipProps(`Switch to ${theme === "dark" ? "light" : "dark"} mode`, "bottom")}
           >
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
@@ -2421,7 +2541,7 @@ export default function LocalWriteEditor() {
             onClick={() => openVaultModal()}
             aria-label={vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Manage Private Vault" : "Enable Private Vault"}
             aria-pressed={vaultEnabled}
-            title={vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Private Vault enabled" : "Private Vault"}
+            {...tooltipProps(vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Private Vault enabled" : "Private Vault", "bottom")}
           >
             {vaultStatus === "unlocked" ? <LockOpen size={17} /> : <Lock size={17} />}
           </button>
@@ -2431,7 +2551,7 @@ export default function LocalWriteEditor() {
             onClick={() => setFocusMode((enabled) => !enabled)}
             aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
             aria-pressed={focusMode}
-            title={focusMode ? "Exit focus mode" : "Focus mode"}
+            {...tooltipProps(focusMode ? "Exit focus mode" : "Focus mode", "bottom")}
           >
             <Focus size={17} />
           </button>
@@ -2442,7 +2562,7 @@ export default function LocalWriteEditor() {
             aria-label={aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar"}
             aria-controls="draftside-ai-rail"
             aria-expanded={aiSidebarOpen}
-            title={aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar"}
+            {...tooltipProps(aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar", "bottom")}
           >
             {aiSidebarOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
           </button>
@@ -2453,7 +2573,6 @@ export default function LocalWriteEditor() {
               aria-label="Post actions"
               aria-haspopup="menu"
               aria-expanded={postMenuOpen}
-              title="Post actions"
               onClick={() => setPostMenuOpen((open) => !open)}
             >
               <Ellipsis size={18} />
@@ -2663,7 +2782,7 @@ export default function LocalWriteEditor() {
                     <span key={image.id} className="chat-attachment">
                       <img src={image.previewUrl} alt="" />
                       <span>{image.name}</span>
-                      <button type="button" onClick={() => removeChatImage(image.id)} aria-label={`Remove ${image.name}`} title="Remove image">
+                      <button type="button" onClick={() => removeChatImage(image.id)} aria-label={`Remove ${image.name}`} {...tooltipProps("Remove image", "top")}>
                         <X size={12} />
                       </button>
                     </span>
@@ -2687,7 +2806,7 @@ export default function LocalWriteEditor() {
                   onClick={() => chatImageInputRef.current?.click()}
                   disabled={!capabilities.prompt || aiAction !== null || !activeSession || chatImages.length >= 4}
                   aria-label="Attach image"
-                  title="Attach image"
+                  {...tooltipProps("Attach image", "top")}
                 >
                   <ImageIcon size={15} />
                 </button>
@@ -2697,7 +2816,7 @@ export default function LocalWriteEditor() {
                   onClick={() => void toggleRecording("chat")}
                   disabled={!capabilities.prompt || aiAction !== null || !activeSession || (recordingTarget !== null && recordingTarget !== "chat")}
                   aria-label={recordingTarget === "chat" ? "Stop voice input" : "Voice input"}
-                  title={recordingTarget === "chat" ? "Stop voice input" : "Voice input"}
+                  {...tooltipProps(recordingTarget === "chat" ? "Stop voice input" : "Voice input", "top")}
                 >
                   {recordingTarget === "chat" ? <MicOff size={15} /> : <Mic size={15} />}
                 </button>
@@ -2719,7 +2838,7 @@ export default function LocalWriteEditor() {
                   }
                   aria-label="Chat with Draftside"
                 />
-                <button type="submit" className="chat-send-button" aria-label="Send message" disabled={!canSendChat}>
+                <button type="submit" className="chat-send-button" aria-label="Send message" disabled={!canSendChat} {...tooltipProps("Send message", "left")}>
                   {chatPending ? <LoaderCircle className="spin" size={15} /> : <ArrowUp size={15} />}
                 </button>
               </div>
@@ -2736,23 +2855,23 @@ export default function LocalWriteEditor() {
             </div>
 
             <div className="ai-actions">
-              <button type="button" onClick={prepareModel} disabled={aiAction !== null || !capabilities.prompt}>
+              <button type="button" onClick={prepareModel} disabled={aiAction !== null || !capabilities.prompt} {...tooltipProps(aiActionTooltips.prepare, "top", "wide")}>
                 <Sparkles size={16} />
                 Prepare
               </button>
-              <button type="button" onClick={classifyDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText}>
+              <button type="button" onClick={classifyDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText} {...tooltipProps(aiActionTooltips.classify, "top", "wide")}>
                 <Tags size={16} />
                 Classify
               </button>
-              <button type="button" onClick={thinkWithDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText}>
+              <button type="button" onClick={thinkWithDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText} {...tooltipProps(aiActionTooltips.think, "top", "wide")}>
                 <Brain size={16} />
                 Think
               </button>
-              <button type="button" onClick={continueDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText}>
+              <button type="button" onClick={continueDraft} disabled={aiAction !== null || !capabilities.prompt || !activeText} {...tooltipProps(aiActionTooltips.continue, "top", "wide")}>
                 <FileText size={16} />
                 Continue
               </button>
-              <button type="button" onClick={rewriteSelection} disabled={aiAction !== null || selection.empty}>
+              <button type="button" onClick={rewriteSelection} disabled={aiAction !== null || selection.empty} {...tooltipProps(aiActionTooltips.tighten, "top", "wide")}>
                 <Wand2 size={16} />
                 Tighten
               </button>
@@ -2838,7 +2957,7 @@ export default function LocalWriteEditor() {
             <div className="ai-section output-section">
               <div className="section-title">
                 <span>Output</span>
-                <button type="button" className="mini-icon" onClick={copyAiOutput} disabled={!aiOutput} aria-label="Copy output" title="Copy output">
+                <button type="button" className="mini-icon" onClick={copyAiOutput} disabled={!aiOutput} aria-label="Copy output" {...tooltipProps("Copy output", "left")}>
                   {copiedOutput ? <Check size={14} /> : <Copy size={14} />}
                 </button>
               </div>
@@ -2854,6 +2973,20 @@ export default function LocalWriteEditor() {
           </div>
         )}
       </aside>
+      {activeTooltip ? (
+        <div
+          className={["editor-tooltip", `is-${activeTooltip.placement}`, activeTooltip.size ? `is-${activeTooltip.size}` : ""].filter(Boolean).join(" ")}
+          role="tooltip"
+          style={
+            {
+              "--tooltip-x": `${activeTooltip.x}px`,
+              "--tooltip-y": `${activeTooltip.y}px`,
+            } as React.CSSProperties
+          }
+        >
+          {activeTooltip.label}
+        </div>
+      ) : null}
       {vaultModalOpen ? (
         <VaultDialog
           busy={vaultBusy}

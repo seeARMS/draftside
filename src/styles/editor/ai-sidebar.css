@@ -354,6 +354,16 @@
   background: hsl(var(--button-primary) / 0.9);
 }
 
+.ai-actions button:disabled:hover {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.ai-actions button:first-child:disabled:hover {
+  background: hsl(var(--button-primary));
+  color: hsl(var(--button-primary-foreground));
+}
+
 .translate-section {
   gap: 0.625rem;
 }
