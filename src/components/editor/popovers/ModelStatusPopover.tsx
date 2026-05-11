@@ -119,7 +119,6 @@ export function ModelStatusPopover({
             <span className="model-popover-capabilities">
               <span className={capabilityClass(capabilities.prompt)}>prompt</span>
               <span className={capabilityClass(capabilities.rewriter)}>rewrite</span>
-              <span className={capabilityClass(capabilities.writer)}>write</span>
               <span className={capabilityClass(capabilities.detector)}>language</span>
               <span className={capabilityClass(capabilities.translator)}>translate</span>
             </span>

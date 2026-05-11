@@ -1,4 +1,4 @@
-const CACHE_VERSION = "draftside-2026-05-10.1";
+const CACHE_VERSION = "draftside-2026-05-11.1";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const DOCUMENTS = ["/", "/write"];
@@ -12,9 +12,6 @@ const STATIC_ASSETS = [
   "/draftside-180.png",
   "/draftside-192.png",
   "/draftside-512.png",
-  "/fonts/inter/InterVariable.woff2",
-  "/fonts/inter/InterVariable-Italic.woff2",
-  "/fonts/geist-mono/GeistMono-Variable.woff2",
 ];
 
 async function cacheResponse(cache, url, response) {

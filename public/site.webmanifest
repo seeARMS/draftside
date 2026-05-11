@@ -2,7 +2,7 @@
   "name": "Draftside",
   "short_name": "Draftside",
   "description": "A private offline writing editor powered by TipTap and Chrome built-in Gemini Nano.",
-  "start_url": "/editor",
+  "start_url": "/write",
   "scope": "/",
   "icons": [
     { "src": "draftside.svg", "sizes": "any", "type": "image/svg+xml" },
@@ -19,7 +19,7 @@
     {
       "name": "Open editor",
       "short_name": "Editor",
-      "url": "/editor",
+      "url": "/write",
       "icons": [{ "src": "draftside-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

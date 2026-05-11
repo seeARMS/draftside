@@ -105,7 +105,6 @@ export interface VaultMeta {
 export interface Capabilities {
   prompt: boolean;
   rewriter: boolean;
-  writer: boolean;
   detector: boolean;
   translator: boolean;
 }

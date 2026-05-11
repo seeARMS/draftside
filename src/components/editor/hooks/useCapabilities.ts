@@ -11,7 +11,6 @@ interface CapabilitiesState {
 const INITIAL_CAPABILITIES: Capabilities = {
   prompt: false,
   rewriter: false,
-  writer: false,
   detector: false,
   translator: false,
 };
@@ -30,7 +29,6 @@ export function useCapabilities() {
       const capabilities: Capabilities = {
         prompt: "LanguageModel" in globalThis,
         rewriter: "Rewriter" in globalThis,
-        writer: "Writer" in globalThis,
         detector: "LanguageDetector" in globalThis,
         translator: "Translator" in globalThis,
       };

@@ -2,7 +2,6 @@
 import "@fontsource-variable/geist/index.css";
 import "@fontsource/dm-mono/400.css";
 import "@fontsource/dm-mono/500.css";
-import Analytics from "../components/Analytics.astro";
 import DraftsideEditor from "../components/editor/DraftsideEditor";
 import PwaRegistration from "../components/PwaRegistration.astro";
 import "../styles/global.css";
@@ -47,7 +46,6 @@ const pageDescription =
       })();
     </script>
     <title>{pageTitle}</title>
-    <Analytics />
     <PwaRegistration />
   </head>
   <body class="editor-page">

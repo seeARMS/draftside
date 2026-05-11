@@ -2,3 +2,6 @@ dist/
 .astro
 .wrangler
 node_modules
+.env
+.env.*
+!.env.example

@@ -4,7 +4,7 @@ export const authorName = "Colin Armstrong";
 export const xHandle = "@colinarms";
 export const title = "Draftside — Open Source, Offline AI Writing Editor";
 export const description =
-  "Draftside is an open source writing editor that runs 100% offline. Chrome's built-in Gemini Nano powers inline completions, rewrites, alternate phrasing, and draft classification — all on your device, never on a server.";
+  "Draftside is an open source writing editor that runs 100% offline. Chrome's built-in Gemini Nano powers inline completions, rewrites, alternate phrasing, and draft classification — all on your device, without a model backend.";
 export const examplePrompt = "finish the next sentence";
 export const ogImagePath = "/og/home.png";
 export const ogImageAlt =

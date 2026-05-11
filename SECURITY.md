@@ -1,6 +1,6 @@
 # Security Policy
 
-Draftside is a client-side, offline-first writing editor. It runs entirely in the browser, with no server-side processing of user content. All AI inference happens locally via Chrome's built-in Gemini Nano. Drafts are stored in IndexedDB; the optional Private Vault encrypts drafts with a passkey-derived key via WebAuthn PRF.
+Draftside is a client-side, offline-first writing editor. It runs entirely in the browser, with no backend processing of user content. All AI inference happens locally via Chrome's built-in Gemini Nano. Drafts are stored in IndexedDB; the optional Private Vault encrypts drafts with a passkey-derived key via WebAuthn PRF.
 
 Because the threat model is primarily about local data confidentiality and the integrity of the static web app, the most impactful issues are usually:
 
