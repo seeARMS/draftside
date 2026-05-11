@@ -41,7 +41,7 @@ const TIGHTEN_TOOLTIP = "Rewrites the selected text to be shorter while preservi
 const LIVE_ANALYSIS_TOOLTIP =
   "Reads the draft on a debounce and surfaces form, intent, stance, friction, and an observation. Toggle off for battery or quiet typing.";
 
-export default function LocalWriteEditor() {
+export default function DraftsideEditor() {
   const initialVaultMeta = useMemo(() => readVaultMeta(), []);
 
   const { theme, toggleTheme } = useTheme();
@@ -149,7 +149,7 @@ export default function LocalWriteEditor() {
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "localwrite-prosemirror",
+        class: "draftside-prosemirror",
         spellcheck: "true",
         "aria-label": "Draftside editor",
       },

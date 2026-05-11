@@ -6,7 +6,7 @@ import { countWords } from "../lib/session";
 import { stripJsonFences } from "../lib/json";
 import { truncateForModel } from "../ai/text";
 
-export const ghostCompletionKey = new PluginKey<GhostCompletionState>("localwriteGhostCompletion");
+export const ghostCompletionKey = new PluginKey<GhostCompletionState>("draftsideGhostCompletion");
 
 export const GhostCompletion = Extension.create({
   name: "ghostCompletion",

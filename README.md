@@ -65,10 +65,10 @@ npm run deploy
 src/
   pages/
     index.astro            landing page
-    editor.astro           editor entry
+    write.astro            editor entry
   components/
     editor/
-      LocalWriteEditor.tsx the editor + AI surface
+      DraftsideEditor.tsx  the editor + AI surface
   styles/
     global.css
     editor.css

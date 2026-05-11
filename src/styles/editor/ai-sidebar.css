@@ -81,7 +81,7 @@
 .chat-message {
   display: flex;
   width: 100%;
-  animation: localwrite-fade-up 180ms ease-out both;
+  animation: draftside-fade-up 180ms ease-out both;
 }
 
 .chat-message.user {

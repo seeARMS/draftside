@@ -24,19 +24,19 @@ const enableServiceWorker = import.meta.env.PROD;
         ? caches.keys().then((keys) =>
             Promise.all(
               keys
-                .filter((key) => key.startsWith("localwrite-") || key.startsWith("draftside-"))
+                .filter((key) => key.startsWith("draftside-"))
                 .map((key) => caches.delete(key)),
             ),
           )
         : Promise.resolve();
 
-    if (hadController && sessionStorage.getItem("localwrite.devSwRefresh") !== "done") {
-      sessionStorage.setItem("localwrite.devSwRefresh", "done");
+    if (hadController && sessionStorage.getItem("draftside.devSwRefresh") !== "done") {
+      sessionStorage.setItem("draftside.devSwRefresh", "done");
       Promise.allSettled([clearServiceWorkers, clearCaches]).then(() => {
         window.location.reload();
       });
     } else if (!hadController) {
-      sessionStorage.removeItem("localwrite.devSwRefresh");
+      sessionStorage.removeItem("draftside.devSwRefresh");
     }
   }
 </script>

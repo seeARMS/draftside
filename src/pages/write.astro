@@ -3,7 +3,7 @@ import "@fontsource-variable/geist/index.css";
 import "@fontsource/dm-mono/400.css";
 import "@fontsource/dm-mono/500.css";
 import Analytics from "../components/Analytics.astro";
-import LocalWriteEditor from "../components/editor/LocalWriteEditor";
+import DraftsideEditor from "../components/editor/DraftsideEditor";
 import PwaRegistration from "../components/PwaRegistration.astro";
 import "../styles/global.css";
 import "../styles/editor.css";
@@ -19,8 +19,8 @@ const pageDescription =
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/svg+xml" href="/localwrite.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/localwrite-180.png" />
+    <link rel="icon" type="image/svg+xml" href="/draftside.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/draftside-180.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)" />
@@ -51,6 +51,6 @@ const pageDescription =
     <PwaRegistration />
   </head>
   <body class="editor-page">
-    <LocalWriteEditor client:only="react" />
+    <DraftsideEditor client:only="react" />
   </body>
 </html>

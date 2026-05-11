@@ -1,14 +1,14 @@
 .spin {
-  animation: localwrite-spin 900ms linear infinite;
+  animation: draftside-spin 900ms linear infinite;
 }
 
-@keyframes localwrite-spin {
+@keyframes draftside-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes localwrite-fade-up {
+@keyframes draftside-fade-up {
   from {
     opacity: 0;
     transform: translateY(0.25rem);
@@ -218,12 +218,12 @@
     padding: 2.5rem 1.2rem 32vh;
   }
 
-  .localwrite-prosemirror {
+  .draftside-prosemirror {
     font-size: 1rem;
     line-height: 1.7;
   }
 
-  .localwrite-prosemirror h1 {
+  .draftside-prosemirror h1 {
     font-size: 1.75rem;
   }
 

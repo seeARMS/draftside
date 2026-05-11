@@ -1,7 +1,7 @@
 import type { EditorUiPrefs } from "../lib/types";
 import { TRANSLATION_LANGUAGES } from "../ai/constants";
 
-const ACTIVE_SESSION_KEY = "localwrite.activeSessionId";
+const ACTIVE_SESSION_KEY = "draftside.activeSessionId";
 const UI_PREFS_KEY = "draftside.uiPrefs";
 export const THEME_KEY = "draftside.theme";
 

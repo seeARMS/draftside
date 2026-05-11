@@ -1,4 +1,4 @@
-.localwrite-prosemirror {
+.draftside-prosemirror {
   min-height: 0;
   flex: 1 1 auto;
   outline: none;
@@ -10,17 +10,17 @@
   letter-spacing: 0;
 }
 
-.localwrite-prosemirror > * + * {
+.draftside-prosemirror > * + * {
   margin-top: 0.75em;
 }
 
-.localwrite-prosemirror p {
+.draftside-prosemirror p {
   margin: 0;
 }
 
-.localwrite-prosemirror h1,
-.localwrite-prosemirror h2,
-.localwrite-prosemirror h3 {
+.draftside-prosemirror h1,
+.draftside-prosemirror h2,
+.draftside-prosemirror h3 {
   margin: 1.4em 0 0.35em;
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
@@ -29,28 +29,28 @@
   letter-spacing: 0;
 }
 
-.localwrite-prosemirror h1 {
+.draftside-prosemirror h1 {
   font-size: 1.875rem;
 }
 
-.localwrite-prosemirror h2 {
+.draftside-prosemirror h2 {
   font-size: 1.5rem;
 }
 
-.localwrite-prosemirror h3 {
+.draftside-prosemirror h3 {
   font-size: 1.25rem;
 }
 
-.localwrite-prosemirror ul,
-.localwrite-prosemirror ol {
+.draftside-prosemirror ul,
+.draftside-prosemirror ol {
   padding-left: 1.625em;
 }
 
-.localwrite-prosemirror li {
+.draftside-prosemirror li {
   padding-left: 0.25em;
 }
 
-.localwrite-prosemirror blockquote {
+.draftside-prosemirror blockquote {
   position: relative;
   margin-left: 0;
   padding: 0.5em 0 0.5em 1.5em;
@@ -59,7 +59,7 @@
   font-weight: 500;
 }
 
-.localwrite-prosemirror blockquote::after {
+.draftside-prosemirror blockquote::after {
   content: "";
   position: absolute;
   left: 0;
@@ -70,7 +70,7 @@
   background: hsl(var(--border));
 }
 
-.localwrite-prosemirror code {
+.draftside-prosemirror code {
   padding: 0.15em 0.3em;
   border-radius: 0.25em;
   background: hsl(var(--foreground) / 0.07);
@@ -80,7 +80,7 @@
   font-weight: 500;
 }
 
-.localwrite-prosemirror pre {
+.draftside-prosemirror pre {
   overflow-x: auto;
   margin: 0;
   padding: 0.875rem 1rem;
@@ -92,18 +92,18 @@
   line-height: 1.5;
 }
 
-.localwrite-prosemirror pre code {
+.draftside-prosemirror pre code {
   padding: 0;
   background: transparent;
 }
 
-.localwrite-prosemirror mark {
+.draftside-prosemirror mark {
   border-radius: 0.25em;
   background: hsl(var(--muted));
   color: inherit;
 }
 
-.localwrite-prosemirror a {
+.draftside-prosemirror a {
   color: hsl(var(--foreground));
   text-decoration: underline;
   text-decoration-color: hsl(var(--muted-foreground) / 0.5);
@@ -112,31 +112,31 @@
   transition: text-decoration-color 150ms ease-out;
 }
 
-.localwrite-prosemirror a:hover {
+.draftside-prosemirror a:hover {
   text-decoration-color: hsl(var(--foreground));
 }
 
-.localwrite-prosemirror ul[data-type="taskList"] {
+.draftside-prosemirror ul[data-type="taskList"] {
   padding-left: 0;
   list-style: none;
 }
 
-.localwrite-prosemirror li[data-type="taskItem"] {
+.draftside-prosemirror li[data-type="taskItem"] {
   display: flex;
   align-items: flex-start;
   gap: 0.55rem;
 }
 
-.localwrite-prosemirror li[data-type="taskItem"] > label {
+.draftside-prosemirror li[data-type="taskItem"] > label {
   margin-top: 0.35em;
 }
 
-.localwrite-prosemirror li[data-type="taskItem"] > div {
+.draftside-prosemirror li[data-type="taskItem"] > div {
   flex: 1 1 auto;
 }
 
-.localwrite-prosemirror p.is-editor-empty:first-child::before,
-.localwrite-prosemirror .is-empty::before {
+.draftside-prosemirror p.is-editor-empty:first-child::before,
+.draftside-prosemirror .is-empty::before {
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -144,7 +144,7 @@
   pointer-events: none;
 }
 
-.localwrite-prosemirror ::selection {
+.draftside-prosemirror ::selection {
   background: hsl(var(--foreground) / 0.12);
 }
 

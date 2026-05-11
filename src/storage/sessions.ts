@@ -2,7 +2,7 @@ import type { EncryptedSessionRecord, LockedSessionSummary, StoredSessionRecord,
 import { decryptBytes, encryptBytes } from "../vault/crypto";
 import { textBytes } from "../lib/encoding";
 
-const DB_NAME = "localwrite";
+const DB_NAME = "draftside";
 const DB_VERSION = 1;
 const SESSION_STORE = "sessions";
 
