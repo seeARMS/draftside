@@ -38,6 +38,7 @@
     "preview": "npm run build && wrangler dev",
     "astro": "astro",
     "generate-types": "wrangler types",
+    "typecheck": "tsc --noEmit",
     "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
