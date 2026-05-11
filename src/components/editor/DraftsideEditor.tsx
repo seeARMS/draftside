@@ -28,7 +28,7 @@ import { useTooltip } from "./hooks/useTooltip";
 import { useEditorDocumentTitle } from "./hooks/useEditorDocumentTitle";
 import { usePointerDownOutside, useEscapeDismiss } from "./hooks/useEscapeDismiss";
 import { useMediaQuery } from "./hooks/useMediaQuery";
-import { Drawer } from "../ui/drawer";
+import { Drawer, DrawerContent, DrawerTitle } from "../ui/drawer";
 import { SessionRail } from "./layout/SessionRail";
 import { EditorToolbar } from "./layout/EditorToolbar";
 import { EditorSurface } from "./layout/EditorSurface";
@@ -602,13 +602,10 @@ export default function DraftsideEditor() {
       onBlur={tooltip.handleBlur}
     >
       {isCompact ? (
-        <Drawer
-          open={draftsDrawerOpen}
-          onClose={() => setDraftsDrawerOpen(false)}
-          side="left"
-          ariaLabel="Drafts"
-        >
-          <SessionRail
+        <Drawer open={draftsDrawerOpen} onOpenChange={setDraftsDrawerOpen}>
+          <DrawerContent className="h-[88svh] [&>aside]:flex-1 [&>aside]:min-h-0 [&>aside]:!rounded-none [&>aside]:!outline-0">
+            <DrawerTitle className="sr-only">Drafts</DrawerTitle>
+            <SessionRail
             focusMode={false}
             showInstallBanner={false}
             vaultLocked={vaultLocked}
@@ -648,6 +645,7 @@ export default function DraftsideEditor() {
             onInstall={() => void pwa.install()}
             tooltipProps={tooltip.tooltipProps}
           />
+          </DrawerContent>
         </Drawer>
       ) : null}
 
@@ -805,20 +803,23 @@ export default function DraftsideEditor() {
         return isCompact ? (
           <Drawer
             open={prefs.aiSidebarOpen && !prefs.focusMode}
-            onClose={toggleAiSidebar}
-            side="right"
-            ariaLabel="Local AI"
-            className="w-[min(22rem,calc(100vw-3rem))] [&>aside]:!pb-0"
+            onOpenChange={(open) => {
+              if (open !== prefs.aiSidebarOpen) toggleAiSidebar();
+            }}
+            direction="right"
           >
-            <AiRail
-              focusMode={false}
-              aiSidebarOpen={true}
-              aiProgress={aiProgress}
-              aiTab={prefs.aiTab}
-              setAiTab={setAiTab}
-            >
-              {aiRailChildren}
-            </AiRail>
+            <DrawerContent className="[&>aside]:flex-1 [&>aside]:min-h-0 [&>aside]:!pb-0 [&>aside]:!rounded-none [&>aside]:!outline-0">
+              <DrawerTitle className="sr-only">Local AI</DrawerTitle>
+              <AiRail
+                focusMode={false}
+                aiSidebarOpen={true}
+                aiProgress={aiProgress}
+                aiTab={prefs.aiTab}
+                setAiTab={setAiTab}
+              >
+                {aiRailChildren}
+              </AiRail>
+            </DrawerContent>
           </Drawer>
         ) : (
           <AiRail
