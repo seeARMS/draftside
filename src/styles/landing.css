@@ -22,6 +22,25 @@ html {
     repeating-linear-gradient(90deg, rgba(24, 24, 27, 0.04) 0, rgba(24, 24, 27, 0.04) 1px, transparent 1px, transparent 64px);
 }
 
+[data-landing-nav] {
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+[data-landing-nav].is-scrolled {
+  border-bottom-color: rgba(228, 228, 231, 0.7);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.dark [data-landing-nav].is-scrolled {
+  border-bottom-color: rgba(63, 63, 70, 0.7);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
 .dark .page-shell {
   background:
     linear-gradient(180deg, rgba(10, 10, 10, 0.96), rgba(20, 20, 20, 1) 44%),

@@ -162,6 +162,53 @@ const structuredData = JSON.stringify([
 
     <script is:inline>
       (function () {
+        function init() {
+          const nav = document.querySelector("[data-landing-nav]");
+          if (!nav) return;
+
+          let lastY = window.scrollY;
+          let offset = 0;
+          let navHeight = nav.offsetHeight;
+          let ticking = false;
+
+          window.addEventListener("resize", function () {
+            navHeight = nav.offsetHeight;
+          });
+
+          function update() {
+            const y = window.scrollY;
+            const delta = y - lastY;
+            lastY = y;
+
+            if (y <= 0) {
+              offset = 0;
+            } else {
+              offset = Math.min(0, Math.max(-navHeight, offset - delta));
+            }
+
+            nav.style.transform = "translateY(" + offset + "px)";
+            nav.classList.toggle("is-scrolled", y > 0);
+            ticking = false;
+          }
+
+          window.addEventListener("scroll", function () {
+            if (!ticking) {
+              window.requestAnimationFrame(update);
+              ticking = true;
+            }
+          }, { passive: true });
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", init);
+        } else {
+          init();
+        }
+      })();
+    </script>
+
+    <script is:inline>
+      (function () {
         const ill = document.querySelector("[data-illustration]");
         if (!ill) return;
 
@@ -328,8 +375,8 @@ const structuredData = JSON.stringify([
   </head>
   <body class="overflow-x-hidden bg-white text-zinc-900 antialiased dark:bg-[#141414] dark:text-zinc-100">
     <div class="page-shell">
-      <nav class="relative z-20">
-        <div class="stagger-fade mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-sm">
+      <nav data-landing-nav class="sticky top-0 z-20 px-6 backdrop-blur-md bg-white/80 dark:bg-[#141414]/80 will-change-transform">
+        <div class="stagger-fade mx-auto flex max-w-6xl items-center justify-between py-4 text-sm">
           <a href="/" class="inline-flex items-center gap-2 font-medium text-zinc-950 transition-opacity hover:opacity-80 dark:text-zinc-50">
             <img src="/localwrite-192.png" alt="" width="28" height="28" class="size-7 rounded-md" />
             Draftside
