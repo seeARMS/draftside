@@ -112,6 +112,16 @@ export function AiChat({
           </div>
         ) : null}
 
+        <textarea
+          ref={chatInputRef}
+          value={chatInput}
+          onChange={(event) => onChatInputChange(event.target.value)}
+          onKeyDown={onChatComposerKeyDown}
+          disabled={!capabilities.prompt || aiAction !== null || !activeSession}
+          rows={1}
+          placeholder={placeholder}
+          aria-label="Chat with Draftside"
+        />
         <div className="chat-input-row">
           <input
             ref={chatImageInputRef}
@@ -142,16 +152,6 @@ export function AiChat({
           >
             {recordingTarget === "chat" ? <MicOff size={15} /> : <Mic size={15} />}
           </button>
-          <textarea
-            ref={chatInputRef}
-            value={chatInput}
-            onChange={(event) => onChatInputChange(event.target.value)}
-            onKeyDown={onChatComposerKeyDown}
-            disabled={!capabilities.prompt || aiAction !== null || !activeSession}
-            rows={1}
-            placeholder={placeholder}
-            aria-label="Chat with Draftside"
-          />
           <button type="submit" className="chat-send-button" aria-label="Send message" disabled={!canSendChat} {...tooltipProps("Send message", "left")}>
             {chatPending ? <LoaderCircle className="spin" size={15} /> : <ArrowUp size={15} />}
           </button>

@@ -225,20 +225,23 @@
 
 .chat-input-row {
   display: flex;
-  min-height: 2.5rem;
   align-items: center;
   gap: 0.4rem;
+}
+
+.chat-input-row .chat-send-button {
+  margin-left: auto;
 }
 
 .chat-composer textarea {
   width: 100%;
   max-height: 10rem;
-  min-height: 2.5rem;
+  min-height: 2.25rem;
   overflow-y: auto;
   resize: none;
   scrollbar-width: none;
   border: 0;
-  padding: 0.5rem 0.25rem;
+  padding: 0.375rem 0.5rem 0.25rem;
   background: transparent;
   color: hsl(var(--foreground));
   outline: none;
