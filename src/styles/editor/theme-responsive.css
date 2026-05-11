@@ -140,14 +140,9 @@
   }
 
   .ai-header,
-  .ai-section,
-  .storage-line {
+  .ai-section {
     border-top: 0;
     padding-top: 0;
-  }
-
-  .output-section {
-    min-height: 9rem;
   }
 
   .ai-tab-panel {

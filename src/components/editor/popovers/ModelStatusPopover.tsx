@@ -95,10 +95,6 @@ export function ModelStatusPopover({
                 <em>LanguageModel API</em>
               </span>
               <span>
-                <strong>Exact model</strong>
-                <em>not exposed by Chrome</em>
-              </span>
-              <span>
                 <strong>Availability</strong>
                 <em>{modelInfo.availability ?? aiStatus}</em>
               </span>
@@ -112,34 +108,12 @@ export function ModelStatusPopover({
                   {formatNumber(modelInfo.contextUsage)} / {formatNumber(modelInfo.contextWindow)} ({formatPercent(modelContextRatio)})
                 </em>
               </span>
-              <span>
-                <strong>Default topK</strong>
-                <em>{formatNumber(modelInfo.params?.defaultTopK)}</em>
-              </span>
-              <span>
-                <strong>Max topK</strong>
-                <em>{formatNumber(modelInfo.params?.maxTopK)}</em>
-              </span>
-              <span>
-                <strong>Default temp</strong>
-                <em>{formatNumber(modelInfo.params?.defaultTemperature)}</em>
-              </span>
-              <span>
-                <strong>Max temp</strong>
-                <em>{formatNumber(modelInfo.params?.maxTemperature)}</em>
-              </span>
-              <span>
-                <strong>Active topK</strong>
-                <em>{formatNumber(modelInfo.topK)}</em>
-              </span>
-              <span>
-                <strong>Active temp</strong>
-                <em>{formatNumber(modelInfo.temperature)}</em>
-              </span>
-              <span>
-                <strong>Download</strong>
-                <em>{aiProgress === null ? "idle" : formatPercent(aiProgress)}</em>
-              </span>
+              {aiProgress !== null ? (
+                <span>
+                  <strong>Download</strong>
+                  <em>{formatPercent(aiProgress)}</em>
+                </span>
+              ) : null}
             </span>
 
             <span className="model-popover-capabilities">
@@ -152,7 +126,6 @@ export function ModelStatusPopover({
 
             <span className="model-popover-note">
               Inference stays on-device. Draftside requests English text in and out; storage is {storagePersisted ? "persistent" : "browser-managed"}.
-              {modelInfo.paramsError ? ` ${modelInfo.paramsError}` : ""}
             </span>
           </>
         )}

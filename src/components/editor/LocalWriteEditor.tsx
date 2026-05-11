@@ -699,15 +699,12 @@ export default function LocalWriteEditor() {
             translationTarget={prefs.translationTarget}
             setTranslationTarget={setTranslationTarget}
             translateDraft={() => void aiTools.translateDraft()}
-            applyTranslation={aiTools.applyTranslation}
             lastTranslation={aiTools.lastTranslation}
             selection={selection}
             activeText={activeText}
-            aiOutput={aiOutput}
             aiError={aiError}
             copiedOutput={copiedOutput}
             copyAiOutput={() => void copyAiOutput()}
-            storagePersisted={storagePersisted}
             tooltipProps={tooltip.tooltipProps}
           />
         )}

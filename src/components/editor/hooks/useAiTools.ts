@@ -123,18 +123,29 @@ export function useAiTools(options: UseAiToolsOptions) {
       return;
     }
 
+    const hadSelection = !selection.empty;
+
     setAiAction("translate");
     setAiError("");
     setAiOutput("");
     setLastTranslation("");
+
+    const finish = (translated: string) => {
+      setLastTranslation(translated);
+      setAiOutput(translated);
+      if (hadSelection) {
+        replaceSelectionOrInsert(translated);
+        setLastTranslation("");
+        setAiOutput("");
+      }
+    };
 
     try {
       const sourceLanguage = await detectSourceLanguage(text);
       setTranslationSource(sourceLanguage);
 
       if (sourceLanguage === translationTarget) {
-        setAiOutput(text);
-        setLastTranslation(text);
+        finish(text);
         return;
       }
 
@@ -164,8 +175,7 @@ export function useAiTools(options: UseAiToolsOptions) {
       translator.destroy();
 
       setAiProgress(null);
-      setLastTranslation(translated);
-      setAiOutput(translated);
+      finish(translated);
     } catch (error) {
       setAiProgress(null);
       setAiError(error instanceof Error ? error.message : "Translation failed.");
@@ -176,17 +186,14 @@ export function useAiTools(options: UseAiToolsOptions) {
     capabilities.translator,
     detectSourceLanguage,
     getModelText,
+    replaceSelectionOrInsert,
+    selection.empty,
     setAiAction,
     setAiError,
     setAiOutput,
     setAiProgress,
     translationTarget,
   ]);
-
-  const applyTranslation = useCallback(() => {
-    if (!lastTranslation.trim() || selection.empty) return;
-    replaceSelectionOrInsert(lastTranslation);
-  }, [lastTranslation, replaceSelectionOrInsert, selection.empty]);
 
   const rewriteSelection = useCallback(async () => {
     const text = selection.text.trim();
@@ -266,7 +273,6 @@ export function useAiTools(options: UseAiToolsOptions) {
     lastTranslation,
     detectLanguage,
     translateDraft,
-    applyTranslation,
     rewriteSelection,
   };
 }
