@@ -209,6 +209,7 @@ const structuredData = JSON.stringify([
 
     <script is:inline>
       (function () {
+        function init() {
         const ill = document.querySelector("[data-illustration]");
         if (!ill) return;
 
@@ -369,6 +370,13 @@ const structuredData = JSON.stringify([
 
         render("continue", false);
         startCycle();
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", init);
+        } else {
+          init();
+        }
       })();
     </script>
 
@@ -382,7 +390,7 @@ const structuredData = JSON.stringify([
             Draftside
           </a>
           <div class="flex items-center gap-4 text-zinc-500 dark:text-zinc-400 sm:gap-5">
-            <a href="/editor" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Editor</a>
+            <a href="/write" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Write</a>
             <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">GitHub</a>
             <button
               type="button"
@@ -414,8 +422,8 @@ const structuredData = JSON.stringify([
                 An open source writing editor that runs entirely in your browser. Chrome's built-in Gemini Nano powers inline completions, rewrites, alternate phrasing, and draft classification &mdash; all on your device. No account. No API key. No server.
               </p>
               <div class="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row">
-                <a href="/editor" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
-                  Open the editor
+                <a href="/write" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
+                  Start writing
                 </a>
                 <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 px-5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900 sm:w-auto">
                   <svg viewBox="0 0 24 24" class="h-4 w-4 opacity-80" fill="currentColor" aria-hidden="true">
@@ -542,8 +550,8 @@ const structuredData = JSON.stringify([
               <p class="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
                 Draftside is built for notes, essays, posts, and any draft that benefits from a second pass without leaving the writing flow. Open source, no account, runs in your browser. Open it and start typing.
               </p>
-              <a href="/editor" class="mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
-                Start drafting
+              <a href="/write" class="mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-zinc-950 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 sm:w-auto">
+                Start writing
               </a>
             </div>
           </div>
@@ -554,7 +562,7 @@ const structuredData = JSON.stringify([
         <div class="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <span>&copy; 2026 <a href="https://armstr.ng" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Colin Armstrong</a></span>
           <div class="flex items-center gap-6">
-            <a href="/editor" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Editor</a>
+            <a href="/write" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">Write</a>
             <a href="https://github.com/seeARMS/draftside" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">GitHub</a>
             <a href={xUrl} target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">@colinarms</a>
           </div>

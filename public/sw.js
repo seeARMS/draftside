@@ -1,7 +1,7 @@
-const CACHE_VERSION = "draftside-2026-05-08.1";
+const CACHE_VERSION = "draftside-2026-05-10.1";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
-const DOCUMENTS = ["/", "/editor"];
+const DOCUMENTS = ["/", "/write"];
 const STATIC_ASSETS = [
   "/site.webmanifest",
   "/favicon.ico",
@@ -86,7 +86,7 @@ self.addEventListener("fetch", (event) => {
           await cacheResponse(cache, url.pathname, response);
           return response;
         } catch {
-          return (await cache.match(url.pathname)) || (await cache.match("/editor")) || (await cache.match("/"));
+          return (await cache.match(url.pathname)) || (await cache.match("/write")) || (await cache.match("/"));
         }
       })(),
     );

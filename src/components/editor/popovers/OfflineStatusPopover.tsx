@@ -79,7 +79,7 @@ export function OfflineStatusPopover({
         </span>
 
         <span className="model-popover-note">
-          Production builds register Chrome's service worker at scope /. It precaches / and /editor, the manifest, icons, fonts, and discovered app assets, then runtime-caches same-origin requests. Install adds a standalone launcher; drafts stay in IndexedDB and Gemini Nano runs locally after Chrome downloads it.
+          Production builds register Chrome's service worker at scope /. It precaches / and /write, the manifest, icons, fonts, and discovered app assets, then runtime-caches same-origin requests. Install adds a standalone launcher; drafts stay in IndexedDB and Gemini Nano runs locally after Chrome downloads it.
         </span>
         <span className="model-popover-foot">checked {formatModelInfoTime(offlineInfo.checkedAt)}</span>
       </span>
