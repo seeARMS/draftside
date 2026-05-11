@@ -46,7 +46,7 @@ export function EditorSurface({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto scroll-smooth">
       {vaultLocked ? (
-        <section className="mx-auto grid min-h-full w-[min(100%,34rem)] place-content-center justify-items-center gap-3.5 p-8 text-center" aria-label="Private Vault locked">
+        <section className="mx-auto grid min-h-full w-[min(100%,34rem)] place-content-center justify-items-center gap-3.5 p-8 text-center max-[520px]:p-5" aria-label="Private Vault locked">
           <div className="inline-flex size-12 items-center justify-center rounded-xl bg-muted text-foreground">
             <Lock size={22} />
           </div>
@@ -57,7 +57,7 @@ export function EditorSurface({
           </Button>
         </section>
       ) : (
-        <article className="relative box-border flex min-h-full w-[min(100%,54rem)] flex-col px-[clamp(1.5rem,5vw,4.5rem)] pb-[38vh] pt-[4.5rem] max-[820px]:w-full max-[820px]:px-5 max-[820px]:pb-[32vh] max-[820px]:pt-10" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={onPointerUp}>
+        <article className="relative box-border flex min-h-full w-[min(100%,54rem)] flex-col px-[clamp(1.5rem,5vw,4.5rem)] pb-[38vh] pt-[4.5rem] max-[1120px]:w-full max-[960px]:px-6 max-[960px]:pb-[32vh] max-[960px]:pt-8 max-[520px]:px-4 max-[520px]:pb-[28vh] max-[520px]:pt-5" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={onPointerUp}>
           <EditorContent editor={editor} />
           {expressionTarget ? (
             <ExpressionPopover

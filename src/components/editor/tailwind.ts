@@ -2,14 +2,14 @@ import { cn } from "../../lib/utils";
 
 export const iconButton = (active?: boolean, className?: string) =>
   cn(
-    "inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
+    "inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground max-[520px]:size-9",
     active && "bg-muted text-foreground",
     className,
   );
 
 export const smallIconButton = (active?: boolean, className?: string) =>
   cn(
-    "inline-flex size-9 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
+    "inline-flex size-9 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground max-[520px]:size-8",
     active && "bg-muted text-foreground",
     className,
   );
@@ -47,12 +47,12 @@ export const overlay =
   "fixed inset-0 z-[80] grid place-items-center bg-background/50 p-4 backdrop-blur-md";
 
 export const dialogShell =
-  "grid w-[min(32rem,100%)] max-h-[min(42rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover p-4 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_24px_78px_hsl(var(--foreground)/0.16)]";
+  "grid w-[min(32rem,100%)] max-h-[min(42rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover p-4 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_24px_78px_hsl(var(--foreground)/0.16)] max-[520px]:max-h-[calc(100svh-1rem)] max-[520px]:rounded-xl max-[520px]:p-3";
 
 export const proseMirrorClass = cn(
   "min-h-0 flex-1 outline-none caret-foreground text-foreground font-sans text-base leading-7 tracking-normal selection:bg-foreground/10",
   "[&>*+*]:mt-[0.75em] [&_p]:m-0",
-  "[&_h1]:mt-[1.4em] [&_h1]:mb-[0.35em] [&_h1]:text-3xl [&_h1]:font-medium [&_h1]:leading-tight max-[820px]:[&_h1]:text-[1.75rem]",
+  "[&_h1]:mt-[1.4em] [&_h1]:mb-[0.35em] [&_h1]:text-3xl [&_h1]:font-medium [&_h1]:leading-tight max-[820px]:[&_h1]:text-[1.75rem] max-[520px]:[&_h1]:text-[1.5rem]",
   "[&_h2]:mt-[1.4em] [&_h2]:mb-[0.35em] [&_h2]:text-2xl [&_h2]:font-medium [&_h2]:leading-tight",
   "[&_h3]:mt-[1.4em] [&_h3]:mb-[0.35em] [&_h3]:text-xl [&_h3]:font-medium [&_h3]:leading-tight",
   "[&_ul]:pl-[1.625em] [&_ol]:pl-[1.625em] [&_li]:pl-1",
@@ -66,5 +66,5 @@ export const proseMirrorClass = cn(
   "[&_li[data-type='taskItem']>label]:mt-[0.35em] [&_li[data-type='taskItem']>div]:flex-1",
   "[&_p.is-editor-empty:first-child:before]:pointer-events-none [&_p.is-editor-empty:first-child:before]:float-left [&_p.is-editor-empty:first-child:before]:h-0 [&_p.is-editor-empty:first-child:before]:text-muted-foreground/80 [&_p.is-editor-empty:first-child:before]:content-[attr(data-placeholder)]",
   "[&_.is-empty:before]:pointer-events-none [&_.is-empty:before]:float-left [&_.is-empty:before]:h-0 [&_.is-empty:before]:text-muted-foreground/80 [&_.is-empty:before]:content-[attr(data-placeholder)]",
-  "max-[820px]:text-base max-[820px]:leading-[1.7]",
+  "max-[820px]:text-base max-[820px]:leading-[1.7] max-[520px]:text-[0.9375rem] max-[520px]:leading-7",
 );

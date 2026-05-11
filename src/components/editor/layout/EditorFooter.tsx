@@ -5,7 +5,7 @@ interface EditorFooterProps {
 
 export function EditorFooter({ wordCount, charCount }: EditorFooterProps) {
   return (
-    <footer className="flex min-h-10 items-center justify-end border-t border-border/70 bg-card px-3.5" aria-label="Editor status">
+    <footer className="flex min-h-10 items-center justify-end border-t border-border/70 bg-card px-3.5 max-[520px]:min-h-9 max-[520px]:px-2.5" aria-label="Editor status">
       <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-xs leading-4 text-muted-foreground" aria-live="polite">
         <span>{wordCount} words</span>
         <span>{charCount} chars</span>

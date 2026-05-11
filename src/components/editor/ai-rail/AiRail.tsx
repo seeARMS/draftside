@@ -20,24 +20,19 @@ export function AiRail({ focusMode, aiSidebarOpen, aiProgress, aiTab, setAiTab, 
       id="draftside-ai-rail"
       className={cn(
         panelShell,
-        "flex flex-col gap-3.5 p-4 opacity-100 transition-[opacity,transform,padding,outline-color,visibility,max-height] duration-200 ease-out",
+        "flex flex-col gap-3.5 p-4 opacity-100 transition-[opacity,transform,padding,outline-color,visibility] duration-200 ease-out",
         !aiSidebarOpen && "pointer-events-none invisible translate-x-4 px-0 opacity-0 outline-transparent",
         focusMode && "pointer-events-none invisible translate-x-4 p-0 opacity-0 outline-transparent",
-        "max-[1120px]:col-span-full max-[1120px]:max-h-[30rem] max-[1120px]:translate-y-0 max-[1120px]:overflow-hidden",
-        !aiSidebarOpen && "max-[1120px]:max-h-0 max-[1120px]:translate-y-3 max-[1120px]:py-0",
-        focusMode && "max-[1120px]:max-h-0 max-[1120px]:py-0",
-        "max-[820px]:order-3 max-[820px]:max-h-[72svh] max-[820px]:rounded-none max-[820px]:border-t max-[820px]:border-border/70 max-[820px]:outline-0",
-        !aiSidebarOpen && "max-[820px]:max-h-0",
-        focusMode && "max-[820px]:max-h-0 max-[820px]:min-h-0 max-[820px]:border-t-0",
+        "max-[520px]:gap-3 max-[520px]:p-3",
       )}
       aria-label="Local AI"
       aria-hidden={focusMode || !aiSidebarOpen}
     >
-      <div className="grid shrink-0 gap-3.5">
+      <div className="grid shrink-0 gap-3.5 max-[520px]:gap-2.5">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="mb-1.5 inline-flex min-h-6 items-center rounded-md bg-muted/70 px-2 text-xs font-medium leading-4 text-muted-foreground">Gemini Nano</p>
-            <h2 className="m-0 text-xl font-medium leading-7 tracking-normal text-foreground">Local ML</h2>
+            <h2 className="m-0 text-xl font-medium leading-7 tracking-normal text-foreground max-[520px]:text-base max-[520px]:leading-6">Local ML</h2>
           </div>
         </div>
 

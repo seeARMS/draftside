@@ -66,16 +66,16 @@ export function AiTools(props: AiToolsProps) {
   );
 
   return (
-    <div id="ai-panel-tools" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-0.5 max-[1120px]:min-h-72" role="tabpanel" aria-labelledby="ai-tab-tools">
+    <div id="ai-panel-tools" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-0.5 max-[1120px]:min-h-72 max-[520px]:min-h-80 max-[520px]:gap-3" role="tabpanel" aria-labelledby="ai-tab-tools">
       <div className="grid gap-2.5 border-t border-border/70 pt-4 max-[1120px]:border-t-0 max-[1120px]:pt-0">
-        <div className="flex items-center justify-between gap-3 text-sm font-medium leading-5 text-foreground">
+        <div className="flex items-center justify-between gap-3 text-sm font-medium leading-5 text-foreground max-[520px]:items-start">
           <span className="inline-flex items-center gap-2 text-[0.8125rem] font-medium text-foreground">
             <span className={liveDotClass} aria-hidden="true" />
             <span>{ambientStatusLabel}</span>
           </span>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-2 py-1 text-[0.6875rem] font-medium leading-4 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[pressed=false]:border-border/60"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-transparent px-2 py-1 text-[0.6875rem] font-medium leading-4 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[pressed=false]:border-border/60"
             onClick={toggleLiveAnalysis}
             aria-pressed={liveAnalysisEnabled}
             {...tooltipProps(liveAnalysisTooltip, "left", "wide")}
@@ -134,11 +134,11 @@ export function AiTools(props: AiToolsProps) {
       </div>
 
       <div className="grid gap-2.5 border-t border-border/70 pt-4">
-        <div className="flex items-center justify-between gap-3 text-sm font-medium leading-5 text-foreground">
+        <div className="flex items-center justify-between gap-3 text-sm font-medium leading-5 text-foreground max-[520px]:items-start">
           <span>Translate</span>
           <button
             type="button"
-            className={cn(pill, "border-0 transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-60")}
+            className={cn(pill, "max-w-[72%] overflow-hidden text-ellipsis border-0 transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-60 max-[520px]:max-w-[68%]")}
             onClick={swapTranslation}
             disabled={aiAction !== null || !translationSource || translationSource === translationTarget}
             {...tooltipProps("Swap languages", "left")}

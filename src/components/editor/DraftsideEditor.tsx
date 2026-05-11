@@ -27,6 +27,8 @@ import { useAiTools } from "./hooks/useAiTools";
 import { useTooltip } from "./hooks/useTooltip";
 import { useEditorDocumentTitle } from "./hooks/useEditorDocumentTitle";
 import { usePointerDownOutside, useEscapeDismiss } from "./hooks/useEscapeDismiss";
+import { useMediaQuery } from "./hooks/useMediaQuery";
+import { Drawer } from "../ui/drawer";
 import { SessionRail } from "./layout/SessionRail";
 import { EditorToolbar } from "./layout/EditorToolbar";
 import { EditorSurface } from "./layout/EditorSurface";
@@ -63,6 +65,8 @@ export default function DraftsideEditor() {
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [copiedPostMarkdown, setCopiedPostMarkdown] = useState(false);
   const [postMenuOpen, setPostMenuOpen] = useState(false);
+  const [draftsDrawerOpen, setDraftsDrawerOpen] = useState(false);
+  const isCompact = useMediaQuery("(max-width: 1120px)");
   const [deleteTarget, setDeleteTarget] = useState<WriteSession | null>(null);
   const [selection, setSelection] = useState<SelectionSnapshot>({ empty: true, text: "" });
   const [completionTick, setCompletionTick] = useState(0);
@@ -480,6 +484,7 @@ export default function DraftsideEditor() {
     setAiOutput("");
     setAiError("");
     chat.setChatError("");
+    setDraftsDrawerOpen(false);
   }, [chat, createSession, vault, vaultLocked]);
 
   const handleSelectSession = useCallback(
@@ -488,6 +493,7 @@ export default function DraftsideEditor() {
       setAiOutput("");
       setAiError("");
       chat.setChatError("");
+      setDraftsDrawerOpen(false);
     },
     [chat, selectSession],
   );
@@ -580,9 +586,10 @@ export default function DraftsideEditor() {
     "grid h-svh min-h-svh w-screen grid-cols-[17rem_minmax(0,1fr)_0] gap-2 bg-muted/40 p-2 text-foreground antialiased transition-[grid-template-columns,gap,padding,background-color] duration-300 ease-out",
     prefs.aiSidebarOpen && "grid-cols-[17rem_minmax(0,1fr)_22rem]",
     prefs.focusMode && "grid-cols-[0_minmax(0,1fr)_0] gap-0 bg-card p-0",
-    "max-[1120px]:grid-cols-[15rem_minmax(0,1fr)]",
-    prefs.focusMode && "max-[1120px]:grid-cols-[0_minmax(0,1fr)]",
-    "max-[820px]:flex max-[820px]:h-auto max-[820px]:min-h-svh max-[820px]:w-full max-[820px]:flex-col max-[820px]:p-0",
+    "max-[1240px]:grid-cols-[15rem_minmax(0,1fr)_0]",
+    prefs.aiSidebarOpen && "max-[1240px]:grid-cols-[15rem_minmax(0,1fr)_20rem]",
+    "max-[1120px]:grid-cols-[minmax(0,1fr)] max-[1120px]:gap-0 max-[1120px]:bg-card max-[1120px]:p-0",
+    prefs.focusMode && "max-[1120px]:grid-cols-[minmax(0,1fr)]",
   );
 
   return (
@@ -594,6 +601,56 @@ export default function DraftsideEditor() {
       onFocus={tooltip.handleFocus}
       onBlur={tooltip.handleBlur}
     >
+      {isCompact ? (
+        <Drawer
+          open={draftsDrawerOpen}
+          onClose={() => setDraftsDrawerOpen(false)}
+          side="left"
+          ariaLabel="Drafts"
+        >
+          <SessionRail
+            focusMode={false}
+            vaultLocked={vaultLocked}
+            sessions={sessions}
+            lockedSessions={lockedSessions}
+            activeSession={activeSession}
+            chatPending={chatPending}
+            pwaInstalled={pwa.pwaInstalled}
+            installPromptAvailable={Boolean(pwa.installPrompt)}
+            installStatusLabel={installStatusLabel}
+            offlineReady={offlineReady}
+            offlineBadgeLabel={offlineBadgeLabel}
+            online={online}
+            offlineInfo={offlineInfo}
+            offlineStorageRatio={offlineStorageRatio}
+            storagePersisted={storagePersisted}
+            aiStatus={aiStatus}
+            aiAction={aiAction}
+            aiProgress={aiProgress}
+            modelInfo={modelInfo}
+            modelContextRatio={modelContextRatio}
+            modelUnsupported={modelUnsupported}
+            modelUnavailable={modelUnavailable}
+            capabilities={capabilities}
+            hasActiveModelSession={Boolean(languageModelRef.current)}
+            hasCreatingModelSession={Boolean(creatingModelRef.current)}
+            saveState={saveState}
+            lastSavedAt={lastSavedAt}
+            wordCount={wordCount}
+            charCount={charCount}
+            refreshOfflineInfo={() => void refreshOfflineInfo()}
+            refreshModelInfo={() => void refreshModelInfo()}
+            onCreateSession={() => void handleCreateSession()}
+            onSelectSession={handleSelectSession}
+            onRequestDelete={requestDeleteSession}
+            onUnlock={() => vault.openVaultModal("unlock")}
+            onInstall={() => void pwa.install()}
+            tooltipProps={tooltip.tooltipProps}
+          />
+        </Drawer>
+      ) : null}
+
+      {!isCompact ? (
       <SessionRail
         focusMode={prefs.focusMode}
         vaultLocked={vaultLocked}
@@ -633,14 +690,14 @@ export default function DraftsideEditor() {
         onInstall={() => void pwa.install()}
         tooltipProps={tooltip.tooltipProps}
       />
+      ) : null}
 
       <main
         className={cn(
           panelShell,
           "flex flex-col rounded-none outline-transparent",
           prefs.focusMode && "outline-transparent",
-          "max-[820px]:min-h-[78svh] max-[820px]:rounded-none max-[820px]:outline-0",
-          prefs.focusMode && "max-[820px]:min-h-svh",
+          "max-[1120px]:min-h-svh max-[1120px]:rounded-none max-[1120px]:outline-0",
         )}
       >
         <EditorToolbar
@@ -659,6 +716,7 @@ export default function DraftsideEditor() {
           toggleFocusMode={toggleFocusMode}
           aiSidebarOpen={prefs.aiSidebarOpen}
           toggleAiSidebar={toggleAiSidebar}
+          onOpenDrafts={() => setDraftsDrawerOpen(true)}
           postMenuOpen={postMenuOpen}
           togglePostMenu={togglePostMenu}
           postMenuRef={postMenuRef}
@@ -694,14 +752,8 @@ export default function DraftsideEditor() {
         <EditorFooter wordCount={wordCount} charCount={charCount} />
       </main>
 
-      <AiRail
-        focusMode={prefs.focusMode}
-        aiSidebarOpen={prefs.aiSidebarOpen}
-        aiProgress={aiProgress}
-        aiTab={prefs.aiTab}
-        setAiTab={setAiTab}
-      >
-        {prefs.aiTab === "chat" ? (
+      {(() => {
+        const aiRailChildren = prefs.aiTab === "chat" ? (
           <AiChat
             chatMessages={chatMessages as ChatMessage[]}
             chatMessagesRef={chat.chatMessagesRef}
@@ -748,8 +800,37 @@ export default function DraftsideEditor() {
             copyAiOutput={() => void copyAiOutput()}
             tooltipProps={tooltip.tooltipProps}
           />
-        )}
-      </AiRail>
+        );
+        return isCompact ? (
+          <Drawer
+            open={prefs.aiSidebarOpen && !prefs.focusMode}
+            onClose={toggleAiSidebar}
+            side="right"
+            ariaLabel="Local AI"
+            className="w-[min(22rem,calc(100vw-3rem))] [&>aside]:!pb-0"
+          >
+            <AiRail
+              focusMode={false}
+              aiSidebarOpen={true}
+              aiProgress={aiProgress}
+              aiTab={prefs.aiTab}
+              setAiTab={setAiTab}
+            >
+              {aiRailChildren}
+            </AiRail>
+          </Drawer>
+        ) : (
+          <AiRail
+            focusMode={prefs.focusMode}
+            aiSidebarOpen={prefs.aiSidebarOpen}
+            aiProgress={aiProgress}
+            aiTab={prefs.aiTab}
+            setAiTab={setAiTab}
+          >
+            {aiRailChildren}
+          </AiRail>
+        );
+      })()}
 
       <TooltipLayer activeTooltip={tooltip.activeTooltip} />
 

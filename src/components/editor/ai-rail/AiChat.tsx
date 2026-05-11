@@ -59,7 +59,7 @@ export function AiChat({
           : "Chrome built-in AI is unavailable";
 
   return (
-    <div id="ai-panel-chat" className="flex min-h-0 flex-1 flex-col gap-3 max-[1120px]:min-h-72" role="tabpanel" aria-labelledby="ai-tab-chat">
+    <div id="ai-panel-chat" className="flex min-h-0 flex-1 flex-col gap-3 max-[1120px]:min-h-72 max-[520px]:min-h-80" role="tabpanel" aria-labelledby="ai-tab-chat">
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0.5 pb-1 pt-0.5 scroll-smooth" ref={chatMessagesRef} aria-live="polite">
         {chatMessages.length ? (
           chatMessages.map((message) => (
@@ -148,7 +148,7 @@ export function AiChat({
           />
           <button
             type="button"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground max-[520px]:size-9"
             onClick={() => chatImageInputRef.current?.click()}
             disabled={!capabilities.prompt || aiAction !== null || !activeSession || chatImages.length >= 4}
             aria-label="Attach image"
@@ -159,7 +159,7 @@ export function AiChat({
           <button
             type="button"
             className={cn(
-              "inline-flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground",
+              "inline-flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground max-[520px]:size-9",
               recordingTarget === "chat" && "bg-muted text-destructive",
             )}
             onClick={() => onToggleRecording("chat")}
@@ -169,7 +169,7 @@ export function AiChat({
           >
             {recordingTarget === "chat" ? <MicOff size={15} /> : <Mic size={15} />}
           </button>
-          <button type="submit" className="ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-foreground text-background transition-colors disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground" aria-label="Send message" disabled={!canSendChat} {...tooltipProps("Send message", "left")}>
+          <button type="submit" className="ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-foreground text-background transition-colors disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground max-[520px]:size-9" aria-label="Send message" disabled={!canSendChat} {...tooltipProps("Send message", "left")}>
             {chatPending ? <LoaderCircle className="animate-spin" size={15} /> : <ArrowUp size={15} />}
           </button>
         </div>

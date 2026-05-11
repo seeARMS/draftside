@@ -14,7 +14,7 @@ export function InstallBanner({ pwaInstalled, installPromptAvailable, installSta
   if (pwaInstalled) return null;
 
   return (
-    <div className={cn("mt-2 grid shrink-0 gap-2.5 rounded-md bg-muted/60 p-3 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.75)]", offlineReady && "bg-muted/70")}>
+    <div className={cn("mx-3 mt-2 grid shrink-0 gap-2.5 rounded-md bg-muted/60 p-3 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.75)] max-[520px]:mx-2.5", offlineReady && "bg-muted/70")}>
       <div className="grid min-w-0 gap-1">
         <span className="inline-flex w-max max-w-full items-center gap-1.5 font-mono text-[0.6875rem] font-semibold uppercase leading-4 text-muted-foreground">
           <Download size={13} />
