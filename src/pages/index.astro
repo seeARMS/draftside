@@ -17,6 +17,7 @@ import "../styles/landing.css";
 
 const siteUrl = Astro.site?.toString().replace(/\/$/, "") ?? defaultSiteUrl;
 const pageUrl = `${siteUrl}/`;
+const sitemapUrl = `${siteUrl}/sitemap-index.xml`;
 const metaImage = `${siteUrl}${ogImagePath}`;
 const xUrl = "https://x.com/colinarms";
 const robotsContent = "index, follow, max-image-preview:large, max-snippet:-1";
@@ -85,7 +86,7 @@ const structuredData = JSON.stringify([
     <meta name="robots" content={robotsContent} />
     <meta name="googlebot" content={robotsContent} />
     <link rel="canonical" href={pageUrl} />
-    <link rel="sitemap" type="application/xml" href={`${siteUrl}/sitemap.xml`} />
+    <link rel="sitemap" type="application/xml" href={sitemapUrl} />
 
     <title>{title}</title>
     <meta name="description" content={description} />

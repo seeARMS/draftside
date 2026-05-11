@@ -2,11 +2,17 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 import cloudflare from '@astrojs/cloudflare';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   site: 'https://draftside.ai',
-  integrations: [react()],
+  integrations: [
+    react(),
+    sitemap({
+      filter: (page) => !/\/write\/?$/.test(page)
+    })
+  ],
   fonts: [
     {
       name: 'Inter',

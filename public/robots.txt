@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://draftside.ai/sitemap.xml
+Sitemap: https://draftside.ai/sitemap-index.xml
