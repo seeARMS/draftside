@@ -24,6 +24,7 @@ import { useChat } from "./hooks/useChat";
 import { useRecording } from "./hooks/useRecording";
 import { useAiTools } from "./hooks/useAiTools";
 import { useTooltip } from "./hooks/useTooltip";
+import { useEditorDocumentTitle } from "./hooks/useEditorDocumentTitle";
 import { usePointerDownOutside, useEscapeDismiss } from "./hooks/useEscapeDismiss";
 import { SessionRail } from "./layout/SessionRail";
 import { EditorToolbar } from "./layout/EditorToolbar";
@@ -122,6 +123,7 @@ export default function LocalWriteEditor() {
 
   const skipUpdateRef = useRef(false);
   const extensions = useMemo(() => createEditorExtensions(), []);
+  const { updateDocumentTitle } = useEditorDocumentTitle(activeSession);
 
   const onEditorUpdate = useCallback(
     (editor: import("@tiptap/core").Editor) => {
@@ -129,9 +131,10 @@ export default function LocalWriteEditor() {
       setExpressionTargetSetterRef.current?.();
       ghostRefSet.current?.();
       setCompletionTick((tick) => tick + 1);
+      updateDocumentTitle(editor.getText());
       scheduleSave(editor);
     },
-    [scheduleSave],
+    [scheduleSave, updateDocumentTitle],
   );
 
   // Use refs to bridge between editor onUpdate (which doesn't know about hooks yet)
