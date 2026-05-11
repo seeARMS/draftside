@@ -31,18 +31,6 @@ export function AiRail({ focusMode, aiSidebarOpen, aiProgress, aiTab, setAiTab, 
         <div className="ai-tabs" role="tablist" aria-label="Local AI modes">
           <button
             type="button"
-            id="ai-tab-chat"
-            className={aiTab === "chat" ? "ai-tab is-active" : "ai-tab"}
-            role="tab"
-            aria-selected={aiTab === "chat"}
-            aria-controls="ai-panel-chat"
-            onClick={() => setAiTab("chat")}
-          >
-            <MessageSquare size={15} />
-            Chat
-          </button>
-          <button
-            type="button"
             id="ai-tab-tools"
             className={aiTab === "tools" ? "ai-tab is-active" : "ai-tab"}
             role="tab"
@@ -52,6 +40,18 @@ export function AiRail({ focusMode, aiSidebarOpen, aiProgress, aiTab, setAiTab, 
           >
             <Sparkles size={15} />
             Tools
+          </button>
+          <button
+            type="button"
+            id="ai-tab-chat"
+            className={aiTab === "chat" ? "ai-tab is-active" : "ai-tab"}
+            role="tab"
+            aria-selected={aiTab === "chat"}
+            aria-controls="ai-panel-chat"
+            onClick={() => setAiTab("chat")}
+          >
+            <MessageSquare size={15} />
+            Chat
           </button>
         </div>
       </div>

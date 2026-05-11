@@ -36,6 +36,8 @@ import { AiTools } from "./ai-rail/AiTools";
 import { TooltipLayer } from "./popovers/TooltipLayer";
 import { VaultDialog } from "./dialogs/VaultDialog";
 import { ConfirmDeleteDialog } from "./dialogs/ConfirmDeleteDialog";
+import { OnboardingDialog } from "./dialogs/OnboardingDialog";
+import { useOnboarding } from "./hooks/useOnboarding";
 
 const TIGHTEN_TOOLTIP = "Rewrites the selected text to be shorter while preserving meaning and voice.";
 const LIVE_ANALYSIS_TOOLTIP =
@@ -416,11 +418,22 @@ export default function DraftsideEditor() {
   // PWA install
   const pwa = usePwaInstall(refreshOfflineInfo);
 
+  // Onboarding (first-visit modal)
+  const onboarding = useOnboarding({ aiStatus, modelInfo });
+  const startOnboardingDownload = useCallback(async () => {
+    try {
+      await ensureLanguageModel();
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "Could not start the local model.");
+    }
+  }, [ensureLanguageModel]);
+
   // Post menu dismiss
   const postMenuRef = useRef<HTMLDivElement>(null);
   usePointerDownOutside(postMenuOpen, postMenuRef, () => setPostMenuOpen(false));
   useEscapeDismiss(postMenuOpen, () => setPostMenuOpen(false));
   useEscapeDismiss(Boolean(deleteTarget), () => setDeleteTarget(null));
+  useEscapeDismiss(onboarding.shouldShow, onboarding.dismiss);
 
   // Derived UI values
   const activeText = editor?.getText().trim() ?? activeSession?.plainText.trim() ?? "";
@@ -759,6 +772,22 @@ export default function DraftsideEditor() {
 
       {deleteTarget ? (
         <ConfirmDeleteDialog busy={chatPending} confirmDelete={confirmDeleteSession} setDeleteTarget={setDeleteTarget} target={deleteTarget} />
+      ) : null}
+
+      {onboarding.shouldShow ? (
+        <OnboardingDialog
+          hasApi={onboarding.hasApi}
+          isChromeFamily={onboarding.isChromeFamily}
+          aiStatus={aiStatus}
+          modelInfo={modelInfo}
+          aiProgress={aiProgress}
+          pwaInstallAvailable={Boolean(pwa.installPrompt)}
+          pwaInstalled={pwa.pwaInstalled}
+          onStartDownload={startOnboardingDownload}
+          onInstallPwa={pwa.install}
+          onRefresh={refreshModelInfo}
+          onDismiss={onboarding.dismiss}
+        />
       ) : null}
     </div>
   );

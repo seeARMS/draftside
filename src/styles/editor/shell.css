@@ -31,7 +31,7 @@
 .editor-page button,
 .editor-page input,
 .editor-page textarea {
-  font: inherit;
+  font-family: inherit;
   letter-spacing: 0;
 }
 

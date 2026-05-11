@@ -155,6 +155,7 @@ export function useAiSession({ setAiStatus, setModelInfo, setAiError, setAiProgr
 
   const refreshModelInfo = useCallback(async () => {
     if (!("LanguageModel" in globalThis)) {
+      setAiStatus((current) => (current === "creating" || current === "downloading" ? current : "unsupported"));
       setModelInfo({
         loading: false,
         availability: "unsupported",
@@ -181,6 +182,8 @@ export function useAiSession({ setAiStatus, setModelInfo, setAiError, setAiProgr
       paramsError = error instanceof Error ? error.message : "Chrome did not expose sampling params.";
     }
 
+    setAiStatus((current) => (current === "creating" || current === "downloading" ? current : availability));
+
     const session = languageModelRef.current;
     setModelInfo({
       loading: false,
@@ -193,14 +196,20 @@ export function useAiSession({ setAiStatus, setModelInfo, setAiError, setAiProgr
       topK: session?.topK,
       checkedAt: Date.now(),
     });
-  }, [setModelInfo]);
+  }, [setAiStatus, setModelInfo]);
 
   useEffect(() => {
     if (autoPrepareStartedRef.current || !("LanguageModel" in globalThis)) return;
     autoPrepareStartedRef.current = true;
-    void ensureLanguageModel().catch((error) => {
-      setAiError(error instanceof Error ? error.message : "Could not start the local model.");
-    });
+    void (async () => {
+      try {
+        const availability = await LanguageModel.availability(LANGUAGE_MODEL_OPTIONS);
+        if (availability !== "available") return;
+        await ensureLanguageModel();
+      } catch (error) {
+        setAiError(error instanceof Error ? error.message : "Could not start the local model.");
+      }
+    })();
   }, [ensureLanguageModel, setAiError]);
 
   return {

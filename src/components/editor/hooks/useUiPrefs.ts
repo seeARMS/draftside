@@ -15,7 +15,7 @@ function initialPrefs(): UiPrefsState {
   const stored = readStoredUiPrefs();
   return {
     aiSidebarOpen: stored.aiSidebarOpen ?? true,
-    aiTab: stored.aiTab ?? "chat",
+    aiTab: stored.aiTab ?? "tools",
     focusMode: stored.focusMode ?? false,
     liveAnalysis: stored.liveAnalysis ?? true,
     translationTarget: stored.translationTarget ?? "es",
