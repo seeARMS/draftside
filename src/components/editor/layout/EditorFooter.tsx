@@ -5,15 +5,15 @@ interface EditorFooterProps {
 
 export function EditorFooter({ wordCount, charCount }: EditorFooterProps) {
   return (
-    <footer className="editor-footer" aria-label="Editor status">
-      <div className="editor-footer-metrics" aria-live="polite">
+    <footer className="flex min-h-10 items-center justify-end border-t border-border/70 bg-card px-3.5" aria-label="Editor status">
+      <div className="inline-flex items-center gap-2.5 whitespace-nowrap text-xs leading-4 text-muted-foreground" aria-live="polite">
         <span>{wordCount} words</span>
         <span>{charCount} chars</span>
         <a
           href="https://github.com/seeARMS/draftside"
           target="_blank"
           rel="noopener noreferrer"
-          className="editor-footer-github"
+          className="ml-0.5 inline-flex items-center text-muted-foreground opacity-75 transition hover:text-foreground hover:opacity-100 focus-visible:text-foreground focus-visible:opacity-100"
           aria-label="View source on GitHub"
           title="View source on GitHub"
         >

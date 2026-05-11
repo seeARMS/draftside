@@ -2,6 +2,8 @@ import { LoaderCircle, Lock, LockOpen } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { VaultMeta, VaultModalView, VaultStatus } from "../../../lib/types";
 import { writeClipboardText } from "../../../lib/markdown";
+import { Button } from "../../ui/button";
+import { dialogShell, overlay } from "../tailwind";
 
 interface VaultDialogProps {
   busy: boolean;
@@ -44,20 +46,20 @@ export function VaultDialog({
 }: VaultDialogProps) {
   return (
     <div
-      className="vault-overlay"
+      className={overlay}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy && !recoveryKey) setModalOpen(false);
       }}
     >
-      <div className="vault-dialog" role="dialog" aria-modal="true" aria-labelledby="vault-title">
-        <div className="vault-dialog-header">
-          <div className="vault-dialog-icon" aria-hidden="true">
+      <div className={dialogShell} role="dialog" aria-modal="true" aria-labelledby="vault-title">
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-3.5">
+          <div className="inline-flex size-11 items-center justify-center rounded-lg bg-muted text-foreground" aria-hidden="true">
             {status === "unlocked" ? <LockOpen size={19} /> : <Lock size={19} />}
           </div>
           <div>
-            <h2 id="vault-title">{modalView === "unlock" ? "Unlock Private Vault" : modalView === "disable" ? "Remove encryption?" : "Private Vault"}</h2>
-            <p>
+            <h2 id="vault-title" className="m-0 text-base font-semibold leading-6 text-foreground">{modalView === "unlock" ? "Unlock Private Vault" : modalView === "disable" ? "Remove encryption?" : "Private Vault"}</h2>
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">
               {modalView === "unlock"
                 ? "Use your passkey to decrypt drafts stored on this device."
                 : modalView === "disable"
@@ -67,112 +69,113 @@ export function VaultDialog({
           </div>
         </div>
 
-        {error ? <p className="vault-error">{error}</p> : null}
+        {error ? <p className="m-0 rounded-lg bg-destructive/10 p-3 text-sm leading-snug text-destructive">{error}</p> : null}
 
         {modalView === "intro" ? (
-          <div className="vault-stack">
-            <div className="vault-feature-grid">
-              <span>
-                <strong>Passkey unlock</strong>
-                <em>Touch ID, device PIN, or another passkey method.</em>
+          <div className="grid gap-3.5">
+            <div className="grid grid-cols-2 gap-2 max-[820px]:grid-cols-1">
+              <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Passkey unlock</strong>
+                <em className="text-xs not-italic leading-tight text-muted-foreground">Touch ID, device PIN, or another passkey method.</em>
               </span>
-              <span>
-                <strong>Local encryption</strong>
-                <em>Drafts are encrypted in IndexedDB with AES-GCM.</em>
+              <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Local encryption</strong>
+                <em className="text-xs not-italic leading-tight text-muted-foreground">Drafts are encrypted in IndexedDB with AES-GCM.</em>
               </span>
-              <span>
-                <strong>Offline first</strong>
-                <em>No account or server is required to unlock drafts.</em>
+              <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Offline first</strong>
+                <em className="text-xs not-italic leading-tight text-muted-foreground">No account or server is required to unlock drafts.</em>
               </span>
-              <span>
-                <strong>Recovery key</strong>
-                <em>Generated once in case the passkey is unavailable.</em>
+              <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Recovery key</strong>
+                <em className="text-xs not-italic leading-tight text-muted-foreground">Generated once in case the passkey is unavailable.</em>
               </span>
             </div>
-            <p className="vault-note">
+            <p className="m-0 text-sm leading-snug text-muted-foreground">
               Private Vault requires passkey PRF support. If this browser or authenticator cannot provide PRF output, Draftside will leave drafts unencrypted.
             </p>
-            <div className="vault-actions">
-              <button type="button" className="vault-secondary" onClick={() => setModalOpen(false)} disabled={busy}>
+            <div className="flex justify-end gap-2 max-[820px]:flex-col-reverse">
+              <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={busy}>
                 Cancel
-              </button>
-              <button type="button" className="vault-primary" onClick={() => void enableVault()} disabled={busy}>
-                {busy ? <LoaderCircle className="spin" size={15} /> : <Lock size={15} />}
+              </Button>
+              <Button type="button" onClick={() => void enableVault()} disabled={busy}>
+                {busy ? <LoaderCircle className="animate-spin" size={15} /> : <Lock size={15} />}
                 Enable Private Vault
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
 
         {modalView === "unlock" ? (
-          <div className="vault-stack">
-            <button type="button" className="vault-primary vault-full-button" onClick={() => void unlockWithPasskey()} disabled={busy}>
-              {busy ? <LoaderCircle className="spin" size={15} /> : <LockOpen size={15} />}
+          <div className="grid gap-3.5">
+            <Button type="button" className="w-full" onClick={() => void unlockWithPasskey()} disabled={busy}>
+              {busy ? <LoaderCircle className="animate-spin" size={15} /> : <LockOpen size={15} />}
               Unlock with passkey
-            </button>
+            </Button>
 
             {vaultMeta?.recoveryWrappedKey ? (
-              <div className="vault-recovery-unlock">
-                <label htmlFor="vault-recovery-input">Recovery key</label>
+              <div className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                <label htmlFor="vault-recovery-input" className="text-[0.8125rem] font-semibold leading-5 text-foreground">Recovery key</label>
                 <textarea
                   id="vault-recovery-input"
+                  className="min-h-20 resize-y rounded-md border border-border bg-background p-2.5 font-mono text-[0.8125rem] leading-snug text-foreground outline-none focus:border-ring"
                   value={recoveryInput}
                   onChange={(event) => setRecoveryInput(event.target.value)}
                   placeholder="xxxx-xxxx-xxxx..."
                   rows={3}
                   disabled={busy}
                 />
-                <button type="button" className="vault-secondary" onClick={() => void unlockWithRecoveryKey()} disabled={busy || !recoveryInput.trim()}>
+                <Button type="button" variant="secondary" onClick={() => void unlockWithRecoveryKey()} disabled={busy || !recoveryInput.trim()}>
                   Unlock with recovery key
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>
         ) : null}
 
         {modalView === "manage" ? (
-          <div className="vault-stack">
+          <div className="grid gap-3.5">
             {recoveryKey ? (
-              <div className="vault-recovery-card">
-                <strong>Save this recovery key now</strong>
-                <code>{recoveryKey}</code>
-                <p>Draftside will not show this key again. Store it somewhere private before closing this dialog.</p>
-                <div className="vault-actions">
-                  <button type="button" className="vault-secondary" onClick={() => void writeClipboardText(recoveryKey)} disabled={busy}>
+              <div className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Save this recovery key now</strong>
+                <code className="block rounded-md bg-background p-2.5 font-mono text-[0.8125rem] leading-snug text-foreground [overflow-wrap:anywhere]">{recoveryKey}</code>
+                <p className="mt-1 text-sm leading-snug text-muted-foreground">Draftside will not show this key again. Store it somewhere private before closing this dialog.</p>
+                <div className="flex justify-end gap-2 max-[820px]:flex-col-reverse">
+                  <Button type="button" variant="secondary" onClick={() => void writeClipboardText(recoveryKey)} disabled={busy}>
                     Copy key
-                  </button>
-                  <button type="button" className="vault-primary" onClick={() => setRecoveryKey("")} disabled={busy}>
+                  </Button>
+                  <Button type="button" onClick={() => setRecoveryKey("")} disabled={busy}>
                     I saved it
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
               <>
-                <div className="vault-feature-grid">
-                  <span>
-                    <strong>Status</strong>
-                    <em>{status === "unlocked" ? "unlocked on this tab" : status}</em>
+                <div className="grid grid-cols-2 gap-2 max-[820px]:grid-cols-1">
+                  <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                    <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Status</strong>
+                    <em className="text-xs not-italic leading-tight text-muted-foreground">{status === "unlocked" ? "unlocked on this tab" : status}</em>
                   </span>
-                  <span>
-                    <strong>Protected drafts</strong>
-                    <em>{protectedDraftCount}</em>
+                  <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                    <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Protected drafts</strong>
+                    <em className="text-xs not-italic leading-tight text-muted-foreground">{protectedDraftCount}</em>
                   </span>
-                  <span>
-                    <strong>Saved as</strong>
-                    <em>encrypted records</em>
+                  <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                    <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Saved as</strong>
+                    <em className="text-xs not-italic leading-tight text-muted-foreground">encrypted records</em>
                   </span>
-                  <span>
-                    <strong>Recovery</strong>
-                    <em>{vaultMeta?.recoveryWrappedKey ? "enabled" : "not set"}</em>
+                  <span className="grid min-w-0 gap-1 rounded-lg bg-muted/55 p-3">
+                    <strong className="text-[0.8125rem] font-semibold leading-5 text-foreground">Recovery</strong>
+                    <em className="text-xs not-italic leading-tight text-muted-foreground">{vaultMeta?.recoveryWrappedKey ? "enabled" : "not set"}</em>
                   </span>
                 </div>
-                <div className="vault-actions">
-                  <button type="button" className="vault-secondary" onClick={() => void lockVault()} disabled={busy}>
+                <div className="flex justify-end gap-2 max-[820px]:flex-col-reverse">
+                  <Button type="button" variant="secondary" onClick={() => void lockVault()} disabled={busy}>
                     Lock now
-                  </button>
-                  <button type="button" className="vault-danger" onClick={() => setModalView("disable")} disabled={busy}>
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={() => setModalView("disable")} disabled={busy}>
                     Remove encryption
-                  </button>
+                  </Button>
                 </div>
               </>
             )}
@@ -180,16 +183,16 @@ export function VaultDialog({
         ) : null}
 
         {modalView === "disable" ? (
-          <div className="vault-stack">
-            <p className="vault-note">This keeps your drafts on this device, but rewrites them as plaintext local records. You can enable Private Vault again later.</p>
-            <div className="vault-actions">
-              <button type="button" className="vault-secondary" onClick={() => setModalView("manage")} disabled={busy}>
+          <div className="grid gap-3.5">
+            <p className="m-0 text-sm leading-snug text-muted-foreground">This keeps your drafts on this device, but rewrites them as plaintext local records. You can enable Private Vault again later.</p>
+            <div className="flex justify-end gap-2 max-[820px]:flex-col-reverse">
+              <Button type="button" variant="secondary" onClick={() => setModalView("manage")} disabled={busy}>
                 Back
-              </button>
-              <button type="button" className="vault-danger" onClick={() => void disableVault()} disabled={busy}>
-                {busy ? <LoaderCircle className="spin" size={15} /> : <LockOpen size={15} />}
+              </Button>
+              <Button type="button" variant="destructive" onClick={() => void disableVault()} disabled={busy}>
+                {busy ? <LoaderCircle className="animate-spin" size={15} /> : <LockOpen size={15} />}
                 Remove encryption
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}

@@ -76,10 +76,6 @@ export function formatSaveTime(value: number | null | undefined) {
   }).format(value);
 }
 
-export function capabilityClass(enabled: boolean) {
-  return enabled ? "capability-pill is-on" : "capability-pill";
-}
-
 export function translationLabel(code: string) {
   return TRANSLATION_LANGUAGES.find((language) => language.code === code)?.label ?? code;
 }

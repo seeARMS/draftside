@@ -46,7 +46,7 @@ export const GhostCompletion = Extension.create({
                 completion.pos,
                 () => {
                   const ghost = document.createElement("span");
-                  ghost.className = "ghost-completion";
+                  ghost.className = "pointer-events-none select-none text-muted-foreground opacity-[0.55]";
                   ghost.textContent = completion.text;
                   ghost.setAttribute("aria-hidden", "true");
                   return ghost;

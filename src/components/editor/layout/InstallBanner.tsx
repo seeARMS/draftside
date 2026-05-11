@@ -1,4 +1,6 @@
 import { Download } from "lucide-react";
+import { cn } from "../../../lib/utils";
+import { Button } from "../../ui/button";
 
 interface InstallBannerProps {
   pwaInstalled: boolean;
@@ -12,21 +14,21 @@ export function InstallBanner({ pwaInstalled, installPromptAvailable, installSta
   if (pwaInstalled) return null;
 
   return (
-    <div className={offlineReady ? "install-banner is-offline-ready" : "install-banner"}>
-      <div className="install-banner-copy">
-        <span className="install-banner-kicker">
+    <div className={cn("mt-2 grid shrink-0 gap-2.5 rounded-md bg-muted/60 p-3 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.75)]", offlineReady && "bg-muted/70")}>
+      <div className="grid min-w-0 gap-1">
+        <span className="inline-flex w-max max-w-full items-center gap-1.5 font-mono text-[0.6875rem] font-semibold uppercase leading-4 text-muted-foreground">
           <Download size={13} />
           {installStatusLabel}
         </span>
-        <strong>Install Draftside</strong>
-        <span>Install once and keep writing offline.</span>
+        <strong className="text-sm font-semibold leading-5 text-foreground">Install Draftside</strong>
+        <span className="text-xs leading-tight text-muted-foreground">Install once and keep writing offline.</span>
       </div>
       {installPromptAvailable ? (
-        <button type="button" onClick={onInstall}>
+        <Button type="button" size="sm" onClick={onInstall}>
           Install
-        </button>
+        </Button>
       ) : (
-        <span className="install-banner-fallback">Browser menu</span>
+        <span className="inline-flex min-h-8 items-center justify-center rounded-md bg-background/70 text-xs font-semibold leading-4 text-muted-foreground">Browser menu</span>
       )}
     </div>
   );

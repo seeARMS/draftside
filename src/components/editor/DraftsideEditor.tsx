@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AiAction, AiStatus, ChatMessage, ModelRuntimeInfo, SelectionSnapshot, WriteSession } from "../../lib/types";
 import { EMPTY_DOC, countWords } from "../../lib/session";
 import { documentToMarkdown, downloadTextFile, escapeHtml, fileSafeTitle, writeClipboardText } from "../../lib/markdown";
+import { cn } from "../../lib/utils";
 import { storeActiveSessionId } from "../../storage/prefs";
 import { readVaultMeta } from "../../vault/crypto";
 import { createEditorExtensions } from "../../tiptap/extensions";
@@ -38,6 +39,7 @@ import { VaultDialog } from "./dialogs/VaultDialog";
 import { ConfirmDeleteDialog } from "./dialogs/ConfirmDeleteDialog";
 import { OnboardingDialog } from "./dialogs/OnboardingDialog";
 import { useOnboarding } from "./hooks/useOnboarding";
+import { panelShell, proseMirrorClass } from "./tailwind";
 
 const TIGHTEN_TOOLTIP = "Rewrites the selected text to be shorter while preserving meaning and voice.";
 const LIVE_ANALYSIS_TOOLTIP =
@@ -151,7 +153,7 @@ export default function DraftsideEditor() {
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "draftside-prosemirror",
+        class: proseMirrorClass,
         spellcheck: "true",
         "aria-label": "Draftside editor",
       },
@@ -574,7 +576,14 @@ export default function DraftsideEditor() {
     [chat],
   );
 
-  const appClassName = ["editor-app", prefs.aiSidebarOpen ? "is-ai-open" : "", prefs.focusMode ? "is-focus-mode" : ""].filter(Boolean).join(" ");
+  const appClassName = cn(
+    "grid h-svh min-h-svh w-screen grid-cols-[17rem_minmax(0,1fr)_0] gap-2 bg-muted/40 p-2 text-foreground antialiased transition-[grid-template-columns,gap,padding,background-color] duration-300 ease-out",
+    prefs.aiSidebarOpen && "grid-cols-[17rem_minmax(0,1fr)_22rem]",
+    prefs.focusMode && "grid-cols-[0_minmax(0,1fr)_0] gap-0 bg-card p-0",
+    "max-[1120px]:grid-cols-[15rem_minmax(0,1fr)]",
+    prefs.focusMode && "max-[1120px]:grid-cols-[0_minmax(0,1fr)]",
+    "max-[820px]:flex max-[820px]:h-auto max-[820px]:min-h-svh max-[820px]:w-full max-[820px]:flex-col max-[820px]:p-0",
+  );
 
   return (
     <div
@@ -625,7 +634,15 @@ export default function DraftsideEditor() {
         tooltipProps={tooltip.tooltipProps}
       />
 
-      <main className="editor-main">
+      <main
+        className={cn(
+          panelShell,
+          "flex flex-col rounded-none outline-transparent",
+          prefs.focusMode && "outline-transparent",
+          "max-[820px]:min-h-[78svh] max-[820px]:rounded-none max-[820px]:outline-0",
+          prefs.focusMode && "max-[820px]:min-h-svh",
+        )}
+      >
         <EditorToolbar
           editor={editor}
           vaultLocked={vaultLocked}

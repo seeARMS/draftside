@@ -31,6 +31,8 @@ import {
 import type { RefObject } from "react";
 import type { Editor } from "@tiptap/core";
 import type { AiAction, Capabilities, RecordingTarget, ThemeMode, VaultStatus, WriteSession } from "../../../lib/types";
+import { cn } from "../../../lib/utils";
+import { iconButton } from "../tailwind";
 import { ToolbarButton } from "./ToolbarButton";
 import type { TooltipPlacement } from "../hooks/useTooltip";
 
@@ -106,20 +108,20 @@ export function EditorToolbar(props: EditorToolbarProps) {
   );
 
   return (
-    <div className="editor-toolbar" aria-label="Editor toolbar">
-      <div className="toolbar-group">
+    <div className="flex min-h-[3.75rem] min-w-0 items-center gap-2 border-b border-border/70 bg-card px-3 py-2.5 max-[820px]:sticky max-[820px]:top-0 max-[820px]:z-[5] max-[820px]:overflow-x-auto" aria-label="Editor toolbar">
+      <div className="inline-flex items-center gap-0.5 border-r border-border/70 pr-2">
         {button("Undo", () => editor?.chain().focus().undo().run(), { disabled: !editor?.can().undo() }, <Undo2 size={17} />)}
         {button("Redo", () => editor?.chain().focus().redo().run(), { disabled: !editor?.can().redo() }, <Redo2 size={17} />)}
       </div>
 
-      <div className="toolbar-group">
+      <div className="inline-flex items-center gap-0.5 border-r border-border/70 pr-2">
         {button("Bold", () => editor?.chain().focus().toggleBold().run(), { active: editor?.isActive("bold") }, <Bold size={17} />)}
         {button("Italic", () => editor?.chain().focus().toggleItalic().run(), { active: editor?.isActive("italic") }, <Italic size={17} />)}
         {button("Underline", () => editor?.chain().focus().toggleUnderline().run(), { active: editor?.isActive("underline") }, <UnderlineIcon size={17} />)}
         {button("Highlight", () => editor?.chain().focus().toggleHighlight().run(), { active: editor?.isActive("highlight") }, <Highlighter size={17} />)}
       </div>
 
-      <div className="toolbar-group">
+      <div className="inline-flex items-center gap-0.5 border-r border-border/70 pr-2">
         {button("Heading 1", () => editor?.chain().focus().toggleHeading({ level: 1 }).run(), { active: editor?.isActive("heading", { level: 1 }) }, <Heading1 size={17} />)}
         {button("Heading 2", () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), { active: editor?.isActive("heading", { level: 2 }) }, <Heading2 size={17} />)}
         {button("Bullet list", () => editor?.chain().focus().toggleBulletList().run(), { active: editor?.isActive("bulletList") }, <List size={17} />)}
@@ -129,11 +131,11 @@ export function EditorToolbar(props: EditorToolbarProps) {
         {button("Code", () => editor?.chain().focus().toggleCodeBlock().run(), { active: editor?.isActive("codeBlock") }, <Code2 size={17} />)}
       </div>
 
-      <div className="toolbar-spacer" />
+      <div className="flex-1" />
 
       <button
         type="button"
-        className={recordingTarget === "editor" ? "icon-button is-active is-recording" : "icon-button"}
+        className={iconButton(recordingTarget === "editor", recordingTarget === "editor" ? "text-destructive" : undefined)}
         onClick={() => void toggleRecording("editor")}
         disabled={vaultLocked || !capabilities.prompt || aiAction !== null || (recordingTarget !== null && recordingTarget !== "editor")}
         aria-label={recordingTarget === "editor" ? "Stop dictation" : "Dictate into editor"}
@@ -143,7 +145,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
       </button>
       <button
         type="button"
-        className="icon-button"
+        className={iconButton()}
         onClick={toggleTheme}
         aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         {...tooltipProps(`Switch to ${theme === "dark" ? "light" : "dark"} mode`, "bottom")}
@@ -152,7 +154,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
       </button>
       <button
         type="button"
-        className={vaultEnabled ? "icon-button vault-button is-active" : "icon-button vault-button"}
+        className={iconButton(vaultEnabled)}
         onClick={openVaultModal}
         aria-label={vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Manage Private Vault" : "Enable Private Vault"}
         aria-pressed={vaultEnabled}
@@ -162,7 +164,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
       </button>
       <button
         type="button"
-        className={focusMode ? "icon-button is-active" : "icon-button"}
+        className={iconButton(focusMode)}
         onClick={toggleFocusMode}
         aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
         aria-pressed={focusMode}
@@ -172,7 +174,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
       </button>
       <button
         type="button"
-        className={aiSidebarOpen ? "icon-button is-active" : "icon-button"}
+        className={iconButton(aiSidebarOpen)}
         onClick={toggleAiSidebar}
         aria-label={aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar"}
         aria-controls="draftside-ai-rail"
@@ -181,10 +183,10 @@ export function EditorToolbar(props: EditorToolbarProps) {
       >
         {aiSidebarOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
       </button>
-      <div className="post-menu" ref={postMenuRef}>
+      <div className="relative z-20 shrink-0" ref={postMenuRef}>
         <button
           type="button"
-          className="post-menu-trigger"
+          className={iconButton(postMenuOpen)}
           aria-label="Post actions"
           aria-haspopup="menu"
           aria-expanded={postMenuOpen}
@@ -193,23 +195,25 @@ export function EditorToolbar(props: EditorToolbarProps) {
           <Ellipsis size={18} />
         </button>
         {postMenuOpen ? (
-          <div className="post-menu-content" role="menu" aria-label="Post actions">
-            <button type="button" role="menuitem" className="post-menu-item" onClick={onDownloadHtml} disabled={!editor || !activeSession}>
+          <div className="absolute right-0 top-[calc(100%+0.5rem)] grid w-max min-w-[13.5rem] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border))]" role="menu" aria-label="Post actions">
+            <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={onDownloadHtml} disabled={!editor || !activeSession}>
               <Download size={16} />
               Download as HTML
             </button>
-            <button type="button" role="menuitem" className="post-menu-item" onClick={onDownloadMarkdown} disabled={!activeSession}>
+            <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={onDownloadMarkdown} disabled={!activeSession}>
               <FileText size={16} />
               Download as Markdown
             </button>
-            <button type="button" role="menuitem" className="post-menu-item" onClick={onCopyMarkdown} disabled={!activeSession}>
+            <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={onCopyMarkdown} disabled={!activeSession}>
               {copiedPostMarkdown ? <Check size={16} /> : <Copy size={16} />}
               {copiedPostMarkdown ? "Copied Markdown" : "Copy as Markdown"}
             </button>
             <button
               type="button"
               role="menuitem"
-              className="post-menu-item is-danger"
+              className={cn(
+                "flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-destructive transition-colors hover:bg-destructive/10 disabled:pointer-events-none disabled:opacity-50",
+              )}
               onClick={onRequestDeleteActive}
               disabled={chatPending || !activeSession}
             >

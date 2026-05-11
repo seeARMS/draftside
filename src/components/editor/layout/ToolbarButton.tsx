@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Button } from "../../ui/button";
+import { cn } from "../../../lib/utils";
 import type { TooltipPlacement } from "../hooks/useTooltip";
 
 interface ToolbarButtonProps {
@@ -12,15 +14,17 @@ interface ToolbarButtonProps {
 
 export function ToolbarButton({ label, active = false, disabled = false, onClick, children, tooltipProps }: ToolbarButtonProps) {
   return (
-    <button
+    <Button
       type="button"
-      className={active ? "tool-button is-active" : "tool-button"}
+      variant="ghost"
+      size="iconSm"
+      className={cn("text-muted-foreground", active && "bg-muted text-foreground")}
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
       {...tooltipProps(label, "bottom")}
     >
       {children}
-    </button>
+    </Button>
   );
 }

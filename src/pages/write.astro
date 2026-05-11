@@ -5,7 +5,6 @@ import "@fontsource/dm-mono/500.css";
 import DraftsideEditor from "../components/editor/DraftsideEditor";
 import PwaRegistration from "../components/PwaRegistration.astro";
 import "../styles/global.css";
-import "../styles/editor.css";
 
 const pageTitle = "Draftside";
 const pageDescription =
@@ -31,7 +30,6 @@ const pageDescription =
       (() => {
         const applyTheme = (theme) => {
           document.documentElement.classList.toggle("dark", theme === "dark");
-          document.documentElement.classList.toggle("light", theme === "light");
           document.documentElement.style.colorScheme = theme;
         };
 
@@ -48,7 +46,7 @@ const pageDescription =
     <title>{pageTitle}</title>
     <PwaRegistration />
   </head>
-  <body class="editor-page">
+  <body class="bg-background font-sans text-foreground antialiased">
     <DraftsideEditor client:only="react" />
   </body>
 </html>

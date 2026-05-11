@@ -13,7 +13,6 @@ import {
   xHandle,
 } from "../site-meta.js";
 import "../styles/global.css";
-import "../styles/landing.css";
 
 const siteUrl = Astro.site?.toString().replace(/\/$/, "") ?? defaultSiteUrl;
 const pageUrl = `${siteUrl}/`;
@@ -123,16 +122,6 @@ const structuredData = JSON.stringify([
       const THEME_TRANSITION_MS = 240;
       let themeTransitionTimeout;
 
-      if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-        root.classList.add("motion-pending");
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            root.classList.remove("motion-pending");
-            root.classList.add("motion-ready");
-          });
-        });
-      }
-
       updateMode();
       darkModeMediaQuery.addEventListener("change", () => {
         if (localStorage.getItem(THEME_KEY)) return;
@@ -148,10 +137,8 @@ const structuredData = JSON.stringify([
       }
 
       function startThemeTransition() {
-        root.classList.add("theme-switching");
         window.clearTimeout(themeTransitionTimeout);
         themeTransitionTimeout = window.setTimeout(() => {
-          root.classList.remove("theme-switching");
         }, THEME_TRANSITION_MS);
       }
 
@@ -190,7 +177,6 @@ const structuredData = JSON.stringify([
             }
 
             nav.style.transform = "translateY(" + offset + "px)";
-            nav.classList.toggle("is-scrolled", y > 0);
             ticking = false;
           }
 
@@ -222,69 +208,87 @@ const structuredData = JSON.stringify([
         if (!body || !panel || buttons.length === 0) return;
 
         const TITLE = "Working title";
+        const DRAFT_TITLE = "mb-5 block text-[1.4em] font-semibold tracking-[-0.022em]";
+        const GHOST_TEXT = "text-zinc-500/60 dark:text-zinc-400/60";
+        const GHOST_KEY = "ml-[0.45em] inline-block rounded border border-b-2 border-zinc-300 bg-zinc-100 px-[0.45em] py-[0.05em] align-[0.18em] font-mono text-[0.62em] uppercase leading-snug tracking-[0.05em] text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
+        const PANEL_BLOCK = "p-4 font-mono";
+        const PANEL_TITLE = "mb-2 font-mono text-[0.6rem] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400";
+        const STATUS_ROW = "flex items-center gap-2 text-[0.7rem] text-zinc-800 dark:text-zinc-200";
+        const STATUS_DOT = "size-1.5 rounded-full bg-green-500 shadow-[0_0_0_3px_rgb(34_197_94/0.2)]";
+        const ALT_LIST = "m-0 flex list-none flex-col gap-1 p-0";
+        const ALT_ITEM = "rounded border border-zinc-200 bg-white/60 px-2 py-1 text-[0.68rem] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300";
+        const ALT_ITEM_ACTIVE = "rounded border border-green-500/45 bg-green-500/15 px-2 py-1 text-[0.68rem] text-green-800 dark:border-green-500/55 dark:bg-green-500/20 dark:text-green-100";
+        const LANG_PILL = "rounded-full border border-zinc-200 bg-zinc-100/70 px-2 py-1 text-[0.62rem] uppercase tracking-[0.06em] dark:border-zinc-700 dark:bg-zinc-700/50";
+        const CHAT_THREAD = "flex flex-col gap-2 text-[0.66rem] leading-normal";
+        const CHAT_USER = "max-w-[92%] self-end rounded-lg bg-zinc-950 px-2.5 py-1.5 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-950";
+        const CHAT_ASSISTANT = "max-w-[92%] self-start rounded-lg border border-zinc-200 bg-zinc-100 px-2.5 py-1.5 text-zinc-800 dark:border-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-200";
+        const CLASSIFICATION = "p-4 font-mono";
+        const CLASSIFICATION_DL = "m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2";
+        const CLASSIFICATION_DT = "text-[0.6rem] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400";
+        const CLASSIFICATION_DD = "m-0 text-[0.7rem] tracking-normal text-zinc-800 dark:text-zinc-200";
 
         const STATES = {
           continue: {
             body:
-              "<strong>" + TITLE + "</strong>" +
-              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class=\"ghost-text\"> and offers the next few words.</span><span class=\"ghost-key\">tab</span></p>",
+              "<strong class=\"" + DRAFT_TITLE + "\">" + TITLE + "</strong>" +
+              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class=\"" + GHOST_TEXT + "\"> and offers the next few words.</span><span class=\"" + GHOST_KEY + "\">tab</span></p>",
             panel:
-              "<div class=\"panel-block\"><div class=\"panel-title\">on-device model</div>" +
-              "<div class=\"status-row\"><span class=\"status-dot\"></span><span>Gemini Nano &middot; ready</span></div></div>",
+              "<div class=\"" + PANEL_BLOCK + "\"><div class=\"" + PANEL_TITLE + "\">on-device model</div>" +
+              "<div class=\"" + STATUS_ROW + "\"><span class=\"" + STATUS_DOT + "\"></span><span>Gemini Nano &middot; ready</span></div></div>",
           },
           rewrite: {
             body:
-              "<strong>" + TITLE + "</strong>" +
-              "<p>Start with the rough version. <span class=\"rewrite-old\">Draftside keeps the page quiet</span> <span class=\"rewrite-new\">the page stays still</span> while local AI waits at the edge of the sentence.</p>",
+              "<strong class=\"" + DRAFT_TITLE + "\">" + TITLE + "</strong>" +
+              "<p>Start with the rough version. <span class=\"text-zinc-400 line-through decoration-red-400/60 decoration-[1.5px] dark:text-zinc-400/60\">Draftside keeps the page quiet</span> <span class=\"rounded bg-green-500/15 px-1 text-green-800 dark:bg-green-500/20 dark:text-green-100\">the page stays still</span> while local AI waits at the edge of the sentence.</p>",
             panel:
-              "<div class=\"panel-block\"><div class=\"panel-title\">alternate phrasing</div>" +
-              "<ul class=\"alt-list\">" +
-              "<li>tighten the page</li>" +
-              "<li class=\"active\">the page stays still</li>" +
-              "<li>silence the page</li>" +
+              "<div class=\"" + PANEL_BLOCK + "\"><div class=\"" + PANEL_TITLE + "\">alternate phrasing</div>" +
+              "<ul class=\"" + ALT_LIST + "\">" +
+              "<li class=\"" + ALT_ITEM + "\">tighten the page</li>" +
+              "<li class=\"" + ALT_ITEM_ACTIVE + "\">the page stays still</li>" +
+              "<li class=\"" + ALT_ITEM + "\">silence the page</li>" +
               "</ul></div>",
           },
           classify: {
             body:
-              "<strong>" + TITLE + "</strong>" +
+              "<strong class=\"" + DRAFT_TITLE + "\">" + TITLE + "</strong>" +
               "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence and offers the next few words.</p>",
             panel:
-              "<div class=\"classification\">" +
-              "<div class=\"panel-title\" style=\"margin-bottom:0.55rem\">signals</div>" +
-              "<dl>" +
-              "<dt>form</dt><dd>notes</dd>" +
-              "<dt>intent</dt><dd>drafting</dd>" +
-              "<dt>stance</dt><dd>tentative</dd>" +
-              "<dt>friction</dt><dd>finding the thread</dd>" +
+              "<div class=\"" + CLASSIFICATION + "\">" +
+              "<div class=\"" + PANEL_TITLE + "\">signals</div>" +
+              "<dl class=\"" + CLASSIFICATION_DL + "\">" +
+              "<dt class=\"" + CLASSIFICATION_DT + "\">form</dt><dd class=\"" + CLASSIFICATION_DD + "\">notes</dd>" +
+              "<dt class=\"" + CLASSIFICATION_DT + "\">intent</dt><dd class=\"" + CLASSIFICATION_DD + "\">drafting</dd>" +
+              "<dt class=\"" + CLASSIFICATION_DT + "\">stance</dt><dd class=\"" + CLASSIFICATION_DD + "\">tentative</dd>" +
+              "<dt class=\"" + CLASSIFICATION_DT + "\">friction</dt><dd class=\"" + CLASSIFICATION_DD + "\">finding the thread</dd>" +
               "</dl></div>",
           },
           translate: {
             body:
-              "<strong>Título provisional</strong>" +
+              "<strong class=\"" + DRAFT_TITLE + "\">Título provisional</strong>" +
               "<p>Empieza con la versión áspera. Draftside mantiene la página en silencio mientras la IA local espera al borde de la frase y ofrece las siguientes palabras.</p>",
             panel:
-              "<div class=\"panel-block\"><div class=\"panel-title\">translate</div>" +
-              "<div class=\"lang-row\"><span class=\"lang-pill\">EN</span><span class=\"lang-arrow\">→</span><span class=\"lang-pill\">ES</span></div></div>",
+              "<div class=\"" + PANEL_BLOCK + "\"><div class=\"" + PANEL_TITLE + "\">translate</div>" +
+              "<div class=\"flex items-center gap-2 text-[0.7rem] text-zinc-800 dark:text-zinc-200\"><span class=\"" + LANG_PILL + "\">EN</span><span class=\"text-zinc-500 dark:text-zinc-400\">→</span><span class=\"" + LANG_PILL + "\">ES</span></div></div>",
           },
           chat: {
             body:
-              "<strong>" + TITLE + "</strong>" +
+              "<strong class=\"" + DRAFT_TITLE + "\">" + TITLE + "</strong>" +
               "<p>Start rough. The page stays quiet while local AI waits at the edge of the sentence.</p>",
             panel:
-              "<div class=\"panel-block\"><div class=\"panel-title\">local chat</div>" +
-              "<div class=\"chat-thread\">" +
-              "<div class=\"chat-row is-user\">make the opening sharper</div>" +
-              "<div class=\"chat-row is-assistant\">tightened the first line and dropped the qualifier.</div>" +
+              "<div class=\"" + PANEL_BLOCK + "\"><div class=\"" + PANEL_TITLE + "\">local chat</div>" +
+              "<div class=\"" + CHAT_THREAD + "\">" +
+              "<div class=\"" + CHAT_USER + "\">make the opening sharper</div>" +
+              "<div class=\"" + CHAT_ASSISTANT + "\">tightened the first line and dropped the qualifier.</div>" +
               "</div></div>",
           },
           transcribe: {
             body:
-              "<strong>" + TITLE + "</strong>" +
-              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence.<span class=\"transcribe-incoming\"> And one more thing &mdash; this part I'm saying out loud.</span></p>",
+              "<strong class=\"" + DRAFT_TITLE + "\">" + TITLE + "</strong>" +
+              "<p>Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence.<span class=\"rounded bg-green-500/10 px-1 text-green-800 dark:bg-green-500/20 dark:text-green-100\"> And one more thing &mdash; this part I'm saying out loud.</span></p>",
             panel:
-              "<div class=\"panel-block\"><div class=\"panel-title\">voice note</div>" +
-              "<div class=\"rec-row\"><span class=\"rec-dot\"></span><span>00:14 &middot; listening</span>" +
-              "<span class=\"rec-bars\" aria-hidden=\"true\"><span></span><span></span><span></span><span></span><span></span></span>" +
+              "<div class=\"" + PANEL_BLOCK + "\"><div class=\"" + PANEL_TITLE + "\">voice note</div>" +
+              "<div class=\"flex items-center gap-2 text-[0.7rem] text-zinc-800 dark:text-zinc-200\"><span class=\"size-2 rounded-full bg-red-500 shadow-[0_0_0_4px_rgb(239_68_68/0.18)] motion-safe:animate-[rec-pulse_1.6s_ease-in-out_infinite]\"></span><span>00:14 &middot; listening</span>" +
+              "<span class=\"ml-auto inline-flex h-4 items-end gap-1\" aria-hidden=\"true\"><span class=\"block h-[35%] w-1 rounded-full bg-red-500/70 motion-safe:animate-[rec-bar_1.1s_ease-in-out_infinite]\"></span><span class=\"block h-[70%] w-1 rounded-full bg-red-500/70 motion-safe:animate-[rec-bar_1.1s_ease-in-out_infinite_150ms]\"></span><span class=\"block h-1/2 w-1 rounded-full bg-red-500/70 motion-safe:animate-[rec-bar_1.1s_ease-in-out_infinite_300ms]\"></span><span class=\"block h-[85%] w-1 rounded-full bg-red-500/70 motion-safe:animate-[rec-bar_1.1s_ease-in-out_infinite_450ms]\"></span><span class=\"block h-[55%] w-1 rounded-full bg-red-500/70 motion-safe:animate-[rec-bar_1.1s_ease-in-out_infinite_600ms]\"></span></span>" +
               "</div></div>",
           },
         };
@@ -300,7 +304,6 @@ const structuredData = JSON.stringify([
         function setActiveButton(key) {
           buttons.forEach(function (btn) {
             const isActive = btn.dataset.action === key;
-            btn.classList.toggle("active", isActive);
             btn.setAttribute("aria-pressed", isActive ? "true" : "false");
           });
         }
@@ -317,14 +320,14 @@ const structuredData = JSON.stringify([
             return;
           }
 
-          body.classList.add("is-fading");
-          panel.classList.add("is-fading");
+          body.classList.add("opacity-0");
+          panel.classList.add("opacity-0");
           window.setTimeout(function () {
             body.innerHTML = state.body;
             panel.innerHTML = state.panel;
             window.requestAnimationFrame(function () {
-              body.classList.remove("is-fading");
-              panel.classList.remove("is-fading");
+              body.classList.remove("opacity-0");
+              panel.classList.remove("opacity-0");
             });
           }, 180);
         }
@@ -385,9 +388,9 @@ const structuredData = JSON.stringify([
 
   </head>
   <body class="overflow-x-hidden bg-white text-zinc-900 antialiased dark:bg-[#141414] dark:text-zinc-100">
-    <div class="page-shell">
-      <nav data-landing-nav class="sticky top-0 z-20 px-6 backdrop-blur-md bg-white/80 dark:bg-[#141414]/80 will-change-transform">
-        <div class="stagger-fade mx-auto flex max-w-6xl items-center justify-between py-4 text-sm">
+    <div class="min-h-svh bg-[linear-gradient(180deg,rgba(250,250,250,0.96),rgba(255,255,255,1)_42%),repeating-linear-gradient(90deg,rgba(24,24,27,0.04)_0,rgba(24,24,27,0.04)_1px,transparent_1px,transparent_64px)] dark:bg-[linear-gradient(180deg,rgba(10,10,10,0.96),rgba(20,20,20,1)_44%),repeating-linear-gradient(90deg,rgba(255,255,255,0.045)_0,rgba(255,255,255,0.045)_1px,transparent_1px,transparent_64px)]">
+      <nav data-landing-nav class="sticky top-0 z-20 border-b border-zinc-200/70 bg-white/80 px-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.05)] backdrop-blur-md will-change-transform dark:border-zinc-700/70 dark:bg-[#141414]/80 dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_8px_24px_rgba(0,0,0,0.25)]">
+        <div class="mx-auto flex max-w-6xl items-center justify-between py-4 text-sm">
           <a href="/" class="inline-flex items-center gap-2 font-medium text-zinc-950 transition-opacity hover:opacity-80 dark:text-zinc-50">
             <img src="/draftside-192.png" alt="" width="28" height="28" class="size-7 rounded-md" />
             Draftside
@@ -416,7 +419,7 @@ const structuredData = JSON.stringify([
       <main>
         <section class="relative overflow-hidden px-6 pb-14 pt-12 sm:pt-14 md:pb-20 md:pt-20 xl:min-h-[82svh]">
           <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 xl:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] xl:gap-6">
-            <div class="stagger-fade-group max-w-2xl">
+            <div class="max-w-2xl">
               <p class="mb-5 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Open source · 100% offline · Local AI</p>
               <h1 class="text-5xl font-semibold leading-[0.98] tracking-[-0.035em] text-zinc-950 text-balance dark:text-zinc-50 sm:text-6xl md:text-7xl">
                 Draftside
@@ -440,33 +443,33 @@ const structuredData = JSON.stringify([
               </p>
             </div>
 
-            <div class="stagger-fade product-field mx-auto w-full max-w-2xl xl:mx-0 xl:max-w-none" style="--stagger-fade-delay: 240ms;" data-illustration>
-            <div class="editor-chrome">
-              <span class="editor-dot"></span>
-              <span class="editor-filename">draftside &middot; untitled.md</span>
-              <span class="editor-badge">offline &middot; on-device</span>
+            <div class="relative mx-auto flex h-[min(36rem,60svh)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-zinc-300/80 bg-white/95 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_30px_80px_rgba(15,23,42,0.10)] dark:border-zinc-700/90 dark:bg-zinc-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.32),0_30px_90px_rgba(0,0,0,0.42)] max-sm:h-auto xl:mx-0 xl:max-w-none" data-illustration>
+            <div class="flex h-[2.35rem] shrink-0 items-center gap-3 border-b border-zinc-200/80 px-4 font-mono text-[0.7rem] text-zinc-500 dark:border-zinc-700/90 dark:text-zinc-400">
+              <span class="size-[0.45rem] rounded-full bg-green-500 shadow-[0_0_0_3px_rgb(34_197_94/0.18)]"></span>
+              <span class="flex-1 tracking-normal">draftside &middot; untitled.md</span>
+              <span class="rounded-full bg-zinc-100 px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.06em] text-zinc-600 dark:bg-zinc-700/70 dark:text-zinc-300 max-sm:hidden">offline &middot; on-device</span>
             </div>
-            <div class="editor-body">
-              <div class="draft-body" data-illustration-body>
-                <strong>Working title</strong>
+            <div class="flex min-h-0 flex-1 max-sm:flex-col">
+              <div class="flex-1 overflow-hidden px-12 py-11 text-[clamp(0.98rem,1.2vw,1.15rem)] leading-[1.85] text-zinc-900/90 transition-opacity duration-200 dark:text-zinc-100/90 max-sm:px-7 max-sm:py-8 max-sm:text-base" data-illustration-body>
+                <strong class="mb-5 block text-[1.4em] font-semibold tracking-[-0.022em]">Working title</strong>
                 <p>
-                  Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class="ghost-text"> and offers the next few words.</span><span class="ghost-key">tab</span>
+                  Start with the rough version. Draftside keeps the page quiet while local AI waits at the edge of the sentence<span class="text-zinc-500/60 dark:text-zinc-400/60"> and offers the next few words.</span><span class="ml-[0.45em] inline-block rounded border border-b-2 border-zinc-300 bg-zinc-100 px-[0.45em] py-[0.05em] align-[0.18em] font-mono text-[0.62em] uppercase leading-snug tracking-[0.05em] text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">tab</span>
                 </p>
               </div>
-              <aside class="ai-inspector">
-                <ul class="ai-actions" role="tablist" aria-label="Demo: pick a Draftside action">
-                  <li><button type="button" data-action="continue" aria-pressed="true" class="active">Continue</button></li>
-                  <li><button type="button" data-action="rewrite" aria-pressed="false">Rewrite</button></li>
-                  <li><button type="button" data-action="classify" aria-pressed="false">Classify</button></li>
-                  <li><button type="button" data-action="translate" aria-pressed="false">Translate</button></li>
-                  <li><button type="button" data-action="chat" aria-pressed="false">Chat</button></li>
-                  <li><button type="button" data-action="transcribe" aria-pressed="false">Transcribe</button></li>
+              <aside class="flex w-[16.5rem] shrink-0 flex-col border-l border-zinc-200/80 bg-zinc-50/70 dark:border-zinc-700/90 dark:bg-zinc-800/45 max-sm:w-full max-sm:border-l-0 max-sm:border-t">
+                <ul class="m-0 list-none border-b border-zinc-200/80 p-3 font-mono text-[0.72rem] dark:border-zinc-700/90 max-sm:flex max-sm:flex-wrap max-sm:gap-1.5 max-sm:px-4" role="tablist" aria-label="Demo: pick a Draftside action">
+                  <li class="list-none"><button type="button" data-action="continue" aria-pressed="true" class="relative block w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-left text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-500/60 aria-pressed:bg-zinc-100 aria-pressed:font-medium aria-pressed:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-100 dark:aria-pressed:bg-zinc-700/70 dark:aria-pressed:text-zinc-100 max-sm:border max-sm:border-zinc-200 max-sm:px-2.5 max-sm:py-1 dark:max-sm:border-zinc-700">Continue</button></li>
+                  <li class="list-none"><button type="button" data-action="rewrite" aria-pressed="false" class="relative block w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-left text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-500/60 aria-pressed:bg-zinc-100 aria-pressed:font-medium aria-pressed:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-100 dark:aria-pressed:bg-zinc-700/70 dark:aria-pressed:text-zinc-100 max-sm:border max-sm:border-zinc-200 max-sm:px-2.5 max-sm:py-1 dark:max-sm:border-zinc-700">Rewrite</button></li>
+                  <li class="list-none"><button type="button" data-action="classify" aria-pressed="false" class="relative block w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-left text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-500/60 aria-pressed:bg-zinc-100 aria-pressed:font-medium aria-pressed:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-100 dark:aria-pressed:bg-zinc-700/70 dark:aria-pressed:text-zinc-100 max-sm:border max-sm:border-zinc-200 max-sm:px-2.5 max-sm:py-1 dark:max-sm:border-zinc-700">Classify</button></li>
+                  <li class="list-none"><button type="button" data-action="translate" aria-pressed="false" class="relative block w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-left text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-500/60 aria-pressed:bg-zinc-100 aria-pressed:font-medium aria-pressed:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-100 dark:aria-pressed:bg-zinc-700/70 dark:aria-pressed:text-zinc-100 max-sm:border max-sm:border-zinc-200 max-sm:px-2.5 max-sm:py-1 dark:max-sm:border-zinc-700">Translate</button></li>
+                  <li class="list-none"><button type="button" data-action="chat" aria-pressed="false" class="relative block w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-left text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-500/60 aria-pressed:bg-zinc-100 aria-pressed:font-medium aria-pressed:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-100 dark:aria-pressed:bg-zinc-700/70 dark:aria-pressed:text-zinc-100 max-sm:border max-sm:border-zinc-200 max-sm:px-2.5 max-sm:py-1 dark:max-sm:border-zinc-700">Chat</button></li>
+                  <li class="list-none"><button type="button" data-action="transcribe" aria-pressed="false" class="relative block w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-left text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-green-500/60 aria-pressed:bg-zinc-100 aria-pressed:font-medium aria-pressed:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-700/60 dark:hover:text-zinc-100 dark:aria-pressed:bg-zinc-700/70 dark:aria-pressed:text-zinc-100 max-sm:border max-sm:border-zinc-200 max-sm:px-2.5 max-sm:py-1 dark:max-sm:border-zinc-700">Transcribe</button></li>
                 </ul>
-                <div class="inspector-panel" data-illustration-panel>
-                  <div class="panel-block">
-                    <div class="panel-title">on-device model</div>
-                    <div class="status-row">
-                      <span class="status-dot"></span>
+                <div class="transition-opacity duration-200" data-illustration-panel>
+                  <div class="p-4 font-mono">
+                    <div class="mb-2 font-mono text-[0.6rem] uppercase tracking-[0.06em] text-zinc-500 dark:text-zinc-400">on-device model</div>
+                    <div class="flex items-center gap-2 text-[0.7rem] text-zinc-800 dark:text-zinc-200">
+                      <span class="size-1.5 rounded-full bg-green-500 shadow-[0_0_0_3px_rgb(34_197_94/0.2)]"></span>
                       <span>Gemini Nano &middot; ready</span>
                     </div>
                   </div>
@@ -479,13 +482,13 @@ const structuredData = JSON.stringify([
 
         <section id="how-it-works" class="px-6 py-16 md:py-20">
           <div class="mx-auto grid max-w-6xl gap-12 md:grid-cols-[0.85fr_1.15fr] md:items-start">
-            <div class="stagger-fade-group">
+            <div>
               <p class="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-500">Why it exists</p>
               <h2 class="mt-4 max-w-md text-3xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50 md:text-4xl">
                 AI help that stays beside the draft, not above it.
               </h2>
             </div>
-            <div class="feature-grid stagger-fade-group grid gap-8 sm:grid-cols-2" style="--stagger-fade-base-delay: 120ms;">
+            <div class="grid gap-8 sm:grid-cols-2 [&>div]:border-t [&>div]:border-zinc-200 [&>div]:pt-5 dark:[&>div]:border-zinc-800">
               <div>
                 <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-4 h-9 w-9 text-zinc-400 dark:text-zinc-500">
                   <path d="M11 27c-3 0-5.5-2.5-5.5-5.5 0-2.6 1.9-4.8 4.4-5.4 0-3.6 3-6.5 6.6-6.5 3 0 5.6 2 6.4 4.7" />
@@ -551,7 +554,7 @@ const structuredData = JSON.stringify([
 
         <section class="px-6 pb-24 pt-6 md:pb-28">
           <div class="mx-auto max-w-6xl border-t border-zinc-200 pt-12 dark:border-zinc-800">
-            <div class="stagger-fade-group max-w-2xl" style="--stagger-fade-base-delay: 60ms;">
+            <div class="max-w-2xl">
               <h2 class="text-3xl font-semibold tracking-[-0.025em] text-zinc-950 dark:text-zinc-50">Open a blank page with a useful edge.</h2>
               <p class="mt-4 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
                 Draftside is built for notes, essays, posts, and any draft that benefits from a second pass without leaving the writing flow. Open source, no account, runs in your browser. Open it and start typing.

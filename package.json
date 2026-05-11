@@ -57,6 +57,7 @@
     "@astrojs/sitemap": "^3.7.2",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource/dm-mono": "^5.2.7",
+    "@radix-ui/react-slot": "^1.2.4",
     "@resvg/resvg-js": "^2.6.2",
     "@tiptap/extension-character-count": "^3.22.5",
     "@tiptap/extension-highlight": "^3.22.5",
@@ -69,10 +70,13 @@
     "@tiptap/markdown": "^3.22.5",
     "@tiptap/react": "^3.22.5",
     "@tiptap/starter-kit": "^3.22.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "satori": "^0.26.0"
+    "satori": "^0.26.0",
+    "tailwind-merge": "^3.6.0"
   },
   "overrides": {
     "vite": "^7"
