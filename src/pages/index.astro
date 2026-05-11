@@ -1,5 +1,6 @@
 ---
 import { Font } from "astro:assets";
+import Analytics from "../components/Analytics.astro";
 import PwaRegistration from "../components/PwaRegistration.astro";
 import {
   authorName,
@@ -111,6 +112,7 @@ const structuredData = JSON.stringify([
     <Font cssVariable="--font-inter" preload />
     <Font cssVariable="--font-geist-mono" preload />
     <script type="application/ld+json" set:html={structuredData}></script>
+    <Analytics />
     <PwaRegistration />
 
     <script is:inline>
