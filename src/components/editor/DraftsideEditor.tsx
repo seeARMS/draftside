@@ -610,6 +610,7 @@ export default function DraftsideEditor() {
         >
           <SessionRail
             focusMode={false}
+            showInstallBanner={false}
             vaultLocked={vaultLocked}
             sessions={sessions}
             lockedSessions={lockedSessions}

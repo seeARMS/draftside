@@ -172,51 +172,11 @@ export function EditorToolbar(props: EditorToolbarProps) {
       </div>
 
       <div className="col-start-3 row-start-1 flex shrink-0 items-center gap-1">
-        <button
-          type="button"
-          className={iconButton()}
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          {...tooltipProps(`Switch to ${theme === "dark" ? "light" : "dark"} mode`, "bottom")}
-        >
-          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
-        <button
-          type="button"
-          className={iconButton(vaultEnabled)}
-          onClick={openVaultModal}
-          aria-label={vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Manage Private Vault" : "Enable Private Vault"}
-          aria-pressed={vaultEnabled}
-          {...tooltipProps(vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Private Vault enabled" : "Private Vault", "bottom")}
-        >
-          {vaultStatus === "unlocked" ? <LockOpen size={17} /> : <Lock size={17} />}
-        </button>
-        <button
-          type="button"
-          className={cn(iconButton(focusMode), "max-[520px]:hidden")}
-          onClick={toggleFocusMode}
-          aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
-          aria-pressed={focusMode}
-          {...tooltipProps(focusMode ? "Exit focus mode" : "Focus mode", "bottom")}
-        >
-          <Focus size={17} />
-        </button>
-        <button
-          type="button"
-          className={iconButton(aiSidebarOpen)}
-          onClick={toggleAiSidebar}
-          aria-label={aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar"}
-          aria-controls="draftside-ai-rail"
-          aria-expanded={aiSidebarOpen}
-          {...tooltipProps(aiSidebarOpen ? "Hide AI" : "Local AI", "bottom")}
-        >
-          {aiSidebarOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
-        </button>
         <div className="relative z-20 shrink-0" ref={postMenuRef}>
           <button
             type="button"
             className={iconButton(postMenuOpen)}
-            aria-label="Post actions"
+            aria-label="More actions"
             aria-haspopup="menu"
             aria-expanded={postMenuOpen}
             onClick={togglePostMenu}
@@ -224,7 +184,20 @@ export function EditorToolbar(props: EditorToolbarProps) {
             <Ellipsis size={18} />
           </button>
           {postMenuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[13.5rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--foreground)/0.12)]" role="menu" aria-label="Post actions">
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[13.5rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--foreground)/0.12)]" role="menu" aria-label="More actions">
+              <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={toggleTheme}>
+                {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+                Switch to {theme === "dark" ? "light" : "dark"} mode
+              </button>
+              <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={openVaultModal}>
+                {vaultStatus === "unlocked" ? <LockOpen size={16} /> : <Lock size={16} />}
+                {vaultStatus === "locked" ? "Unlock Private Vault" : vaultStatus === "unlocked" ? "Manage Private Vault" : "Enable Private Vault"}
+              </button>
+              <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={toggleFocusMode} aria-pressed={focusMode}>
+                <Focus size={16} />
+                {focusMode ? "Exit focus mode" : "Focus mode"}
+              </button>
+              <div className="my-1 h-px bg-border/70" role="separator" />
               <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={onDownloadHtml} disabled={!editor || !activeSession}>
                 <Download size={16} />
                 Download as HTML
@@ -237,6 +210,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
                 {copiedPostMarkdown ? <Check size={16} /> : <Copy size={16} />}
                 {copiedPostMarkdown ? "Copied Markdown" : "Copy as Markdown"}
               </button>
+              <div className="my-1 h-px bg-border/70" role="separator" />
               <button
                 type="button"
                 role="menuitem"
@@ -252,6 +226,17 @@ export function EditorToolbar(props: EditorToolbarProps) {
             </div>
           ) : null}
         </div>
+        <button
+          type="button"
+          className={iconButton(aiSidebarOpen)}
+          onClick={toggleAiSidebar}
+          aria-label={aiSidebarOpen ? "Hide AI sidebar" : "Show AI sidebar"}
+          aria-controls="draftside-ai-rail"
+          aria-expanded={aiSidebarOpen}
+          {...tooltipProps(aiSidebarOpen ? "Hide AI" : "Local AI", "bottom")}
+        >
+          {aiSidebarOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
+        </button>
       </div>
     </div>
   );

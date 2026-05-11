@@ -11,6 +11,7 @@ import type { TooltipPlacement } from "../hooks/useTooltip";
 
 interface SessionRailProps {
   focusMode: boolean;
+  showInstallBanner?: boolean;
   vaultLocked: boolean;
   sessions: WriteSession[];
   lockedSessions: LockedSessionSummary[];
@@ -52,6 +53,7 @@ interface SessionRailProps {
 export function SessionRail(props: SessionRailProps) {
   const {
     focusMode,
+    showInstallBanner = true,
     vaultLocked,
     sessions,
     lockedSessions,
@@ -157,13 +159,15 @@ export function SessionRail(props: SessionRailProps) {
             ))}
       </div>
 
-      <InstallBanner
-        pwaInstalled={pwaInstalled}
-        installPromptAvailable={installPromptAvailable}
-        installStatusLabel={installStatusLabel}
-        offlineReady={offlineReady}
-        onInstall={onInstall}
-      />
+      {showInstallBanner ? (
+        <InstallBanner
+          pwaInstalled={pwaInstalled}
+          installPromptAvailable={installPromptAvailable}
+          installStatusLabel={installStatusLabel}
+          offlineReady={offlineReady}
+          onInstall={onInstall}
+        />
+      ) : null}
 
       <div className="mt-auto flex flex-wrap gap-2 p-3 max-[520px]:p-2.5">
         <OfflineStatusPopover
