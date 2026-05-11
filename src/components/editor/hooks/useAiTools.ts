@@ -37,7 +37,7 @@ export function useAiTools(options: UseAiToolsOptions) {
   } = options;
 
   const [detectedLanguage, setDetectedLanguage] = useState("");
-  const [translationSource, setTranslationSource] = useState("");
+  const [translationSource, setTranslationSource] = useState("en");
   const [lastTranslation, setLastTranslation] = useState("");
 
   const getModelText = useCallback(() => {
@@ -270,6 +270,7 @@ export function useAiTools(options: UseAiToolsOptions) {
   return {
     detectedLanguage,
     translationSource,
+    setTranslationSource,
     lastTranslation,
     detectLanguage,
     translateDraft,

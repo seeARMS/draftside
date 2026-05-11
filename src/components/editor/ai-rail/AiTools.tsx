@@ -1,4 +1,4 @@
-import { Check, Copy, Languages, LoaderCircle, Pause, Play } from "lucide-react";
+import { ArrowLeftRight, Check, Copy, Languages, LoaderCircle, Pause, Play } from "lucide-react";
 import type { AiAction, AmbientStatus, Capabilities, Classification, SelectionSnapshot } from "../../../lib/types";
 import { TRANSLATION_LANGUAGES } from "../../../ai/constants";
 import { translationLabel } from "../../../lib/formatters";
@@ -18,6 +18,7 @@ interface AiToolsProps {
   translationTarget: string;
   setTranslationTarget: (next: string) => void;
   translateDraft: () => void;
+  swapTranslation: () => void;
   lastTranslation: string;
   selection: SelectionSnapshot;
   activeText: string;
@@ -42,6 +43,7 @@ export function AiTools(props: AiToolsProps) {
     translationTarget,
     setTranslationTarget,
     translateDraft,
+    swapTranslation,
     lastTranslation,
     selection,
     activeText,
@@ -124,12 +126,16 @@ export function AiTools(props: AiToolsProps) {
       <div className="ai-section translate-section">
         <div className="section-title">
           <span>Translate</span>
-          {translationSource ? (
-            <span className="language-pill">
-              <Languages size={13} />
-              {translationLabel(translationSource)} → {translationLabel(translationTarget)}
-            </span>
-          ) : null}
+          <button
+            type="button"
+            className="language-pill is-button"
+            onClick={swapTranslation}
+            disabled={aiAction !== null || !translationSource || translationSource === translationTarget}
+            {...tooltipProps("Swap languages", "left")}
+          >
+            <ArrowLeftRight size={13} />
+            {translationLabel(translationSource)} → {translationLabel(translationTarget)}
+          </button>
         </div>
 
         <div className="translate-control">

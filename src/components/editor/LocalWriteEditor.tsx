@@ -544,6 +544,13 @@ export default function LocalWriteEditor() {
     [setPrefs],
   );
 
+  const swapTranslation = useCallback(() => {
+    const source = aiTools.translationSource;
+    if (!source || source === prefs.translationTarget) return;
+    aiTools.setTranslationSource(prefs.translationTarget);
+    setTranslationTarget(source);
+  }, [aiTools, prefs.translationTarget, setTranslationTarget]);
+
   const togglePostMenu = useCallback(() => setPostMenuOpen((open) => !open), []);
 
   const onChatInputChange = useCallback(
@@ -699,6 +706,7 @@ export default function LocalWriteEditor() {
             translationTarget={prefs.translationTarget}
             setTranslationTarget={setTranslationTarget}
             translateDraft={() => void aiTools.translateDraft()}
+            swapTranslation={swapTranslation}
             lastTranslation={aiTools.lastTranslation}
             selection={selection}
             activeText={activeText}
