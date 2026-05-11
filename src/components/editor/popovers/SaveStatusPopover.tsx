@@ -27,7 +27,7 @@ export function SaveStatusPopover({
       </span>
       <span id="save-status-popover" className="save-popover" role="tooltip">
         <span className="model-popover-title">
-          <span>Local draft save</span>
+          <span>Saved on this device</span>
           <span>{saveState}</span>
         </span>
 
@@ -35,10 +35,6 @@ export function SaveStatusPopover({
           <span>
             <strong>Last saved</strong>
             <em>{formatSaveTime(lastSavedAt)}</em>
-          </span>
-          <span>
-            <strong>Last change</strong>
-            <em>{formatSaveTime(activeSession?.updatedAt)}</em>
           </span>
           <span>
             <strong>Created</strong>
@@ -52,7 +48,7 @@ export function SaveStatusPopover({
           </span>
           <span>
             <strong>Storage</strong>
-            <em>{storagePersisted === null ? "checking" : storagePersisted ? "persistent IndexedDB" : "browser-managed IndexedDB"}</em>
+            <em>{storagePersisted === null ? "checking" : storagePersisted ? "Protected" : "May be cleared if disk fills"}</em>
           </span>
           <span>
             <strong>Session</strong>
@@ -61,7 +57,7 @@ export function SaveStatusPopover({
         </span>
 
         <span className="model-popover-note">
-          Draftside autosaves the active document to local IndexedDB about 420ms after edits. Chat history and AI classifications are stored with the same draft.
+          Your draft saves automatically as you type — to this browser only. Chat and AI suggestions are kept with it.
         </span>
       </span>
     </span>

@@ -33,8 +33,8 @@ export function OfflineStatusPopover({
       </span>
       <span id="offline-status-popover" className="offline-popover" role="tooltip">
         <span className="model-popover-title">
-          <span>Offline app shell</span>
-          <span>{offlineInfo.loading ? "checking" : offlineInfo.controlled ? "active" : "standby"}</span>
+          <span>Works offline</span>
+          <span>{offlineInfo.loading ? "checking" : offlineInfo.controlled ? "ready" : "standby"}</span>
         </span>
 
         <span className="model-popover-grid">
@@ -43,34 +43,24 @@ export function OfflineStatusPopover({
             <em>{online ? "online now" : "offline now"}</em>
           </span>
           <span>
-            <strong>Service worker</strong>
-            <em>{offlineInfo.serviceWorkerSupported ? offlineInfo.registrationState : "unsupported"}</em>
+            <strong>Offline cache</strong>
+            <em>{offlineInfo.serviceWorkerSupported ? (offlineInfo.controlled ? "Ready" : offlineInfo.registrationState === "activated" ? "Preparing" : offlineInfo.registrationState) : "Unsupported"}</em>
           </span>
           <span>
-            <strong>Page control</strong>
-            <em>{offlineInfo.controlled ? "controlling this tab" : "not controlling this tab"}</em>
+            <strong>Cached</strong>
+            <em>
+              {formatNumber(offlineInfo.cachedRequests)} files · {formatBytes(offlineInfo.cachedBytes)}
+            </em>
           </span>
           <span>
-            <strong>Cache stores</strong>
-            <em>{formatNumber(offlineInfo.cacheCount)}</em>
-          </span>
-          <span>
-            <strong>Cached responses</strong>
-            <em>{formatNumber(offlineInfo.cachedRequests)}</em>
-          </span>
-          <span>
-            <strong>Cache size</strong>
-            <em>{formatBytes(offlineInfo.cachedBytes)}</em>
-          </span>
-          <span>
-            <strong>Storage used</strong>
+            <strong>Disk used by Draftside</strong>
             <em>
               {formatBytes(offlineInfo.storageUsage)} / {formatBytes(offlineInfo.storageQuota)} ({formatPercent(offlineStorageRatio)})
             </em>
           </span>
           <span>
             <strong>Draft storage</strong>
-            <em>{storagePersisted === null ? "checking" : storagePersisted ? "persistent IndexedDB" : "browser-managed IndexedDB"}</em>
+            <em>{storagePersisted === null ? "checking" : storagePersisted ? "Protected" : "May be cleared if disk fills"}</em>
           </span>
           <span>
             <strong>Install</strong>
@@ -79,7 +69,7 @@ export function OfflineStatusPopover({
         </span>
 
         <span className="model-popover-note">
-          Production builds register Chrome's service worker at scope /. It precaches / and /write, the manifest, icons, fonts, and discovered app assets, then runtime-caches same-origin requests. Install adds a standalone launcher; drafts stay in IndexedDB and Gemini Nano runs locally after Chrome downloads it.
+          Once Draftside loads, you can keep writing without internet. Install it to get a desktop launcher. Your drafts and the AI model live on your device.
         </span>
         <span className="model-popover-foot">checked {formatModelInfoTime(offlineInfo.checkedAt)}</span>
       </span>

@@ -11,7 +11,6 @@ interface ModelStatusPopoverProps {
   modelUnsupported: boolean;
   modelUnavailable: boolean;
   capabilities: Capabilities;
-  storagePersisted: boolean | null;
   hasActiveSession: boolean;
   hasCreatingSession: boolean;
   onRefresh: () => void;
@@ -26,7 +25,6 @@ export function ModelStatusPopover({
   modelUnsupported,
   modelUnavailable,
   capabilities,
-  storagePersisted,
   hasActiveSession,
   hasCreatingSession,
   onRefresh,
@@ -39,14 +37,14 @@ export function ModelStatusPopover({
       </span>
       <span id="model-status-popover" className="model-popover" role="tooltip">
         <span className="model-popover-title">
-          <span>Chrome Gemini local model</span>
+          <span>On-device AI</span>
           <span>{modelInfo.loading ? "checking" : statusLabel(modelInfo.availability ?? aiStatus)}</span>
         </span>
 
         {modelUnsupported ? (
           <>
             <span className="model-help-copy">
-              Local AI in Draftside uses Chrome's built-in Gemini Nano through the browser LanguageModel API. Safari does not expose that API, so the editor and offline drafts work here, but AI tools are disabled.
+              Draftside's AI runs locally through Chrome's built-in model. Safari doesn't support this yet, so the editor and offline drafts work here, but AI tools are turned off.
             </span>
             <span className="model-help-steps">
               <span>
@@ -55,7 +53,7 @@ export function ModelStatusPopover({
               </span>
               <span>
                 <strong>2</strong>
-                <em>Use a Chrome profile where built-in AI / Gemini Nano is available.</em>
+                <em>Use a Chrome profile where the local AI model is available.</em>
               </span>
               <span>
                 <strong>3</strong>
@@ -63,13 +61,13 @@ export function ModelStatusPopover({
               </span>
             </span>
             <span className="model-popover-note">
-              Once Chrome downloads the model, Draftside can run completions, chat, rewrites, classification, and alternate phrasing locally.
+              Once Chrome downloads the model, Draftside can write, chat, rewrite, and suggest phrasing — all locally.
             </span>
           </>
         ) : modelUnavailable ? (
           <>
             <span className="model-help-copy">
-              Chrome exposes the local AI API, but Gemini Nano is not available on this device or Chrome profile yet.
+              Chrome supports local AI, but the model isn't available on this device or Chrome profile yet.
             </span>
             <span className="model-help-steps">
               <span>
@@ -78,32 +76,32 @@ export function ModelStatusPopover({
               </span>
               <span>
                 <strong>2</strong>
-                <em>Try a Chrome build/profile with built-in AI enabled.</em>
+                <em>Try a Chrome build or profile with the local AI model enabled.</em>
               </span>
               <span>
                 <strong>3</strong>
-                <em>Keep Draftside open while Chrome prepares the local model.</em>
+                <em>Keep Draftside open while Chrome prepares the model.</em>
               </span>
             </span>
-            <span className="model-popover-note">Your editor, drafts, and offline cache still work without the model.</span>
+            <span className="model-popover-note">Your editor, drafts, and offline cache still work without it.</span>
           </>
         ) : (
           <>
             <span className="model-popover-grid">
               <span>
-                <strong>Runtime</strong>
-                <em>LanguageModel API</em>
+                <strong>Model</strong>
+                <em>Gemini Nano · Chrome</em>
               </span>
               <span>
                 <strong>Availability</strong>
-                <em>{modelInfo.availability ?? aiStatus}</em>
+                <em>{statusLabel(modelInfo.availability ?? aiStatus)}</em>
               </span>
               <span>
                 <strong>Session</strong>
                 <em>{hasActiveSession ? "active" : hasCreatingSession ? "starting" : "not started"}</em>
               </span>
               <span>
-                <strong>Context used</strong>
+                <strong>Conversation memory</strong>
                 <em>
                   {formatNumber(modelInfo.contextUsage)} / {formatNumber(modelInfo.contextWindow)} ({formatPercent(modelContextRatio)})
                 </em>
@@ -124,7 +122,7 @@ export function ModelStatusPopover({
             </span>
 
             <span className="model-popover-note">
-              Inference stays on-device. Draftside requests English text in and out; storage is {storagePersisted ? "persistent" : "browser-managed"}.
+              Nothing leaves your device — every suggestion is generated locally. English only, for now.
             </span>
           </>
         )}

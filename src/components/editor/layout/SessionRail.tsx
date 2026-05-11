@@ -173,7 +173,6 @@ export function SessionRail(props: SessionRailProps) {
           modelUnsupported={modelUnsupported}
           modelUnavailable={modelUnavailable}
           capabilities={capabilities}
-          storagePersisted={storagePersisted}
           hasActiveSession={hasActiveModelSession}
           hasCreatingSession={hasCreatingModelSession}
           onRefresh={refreshModelInfo}
