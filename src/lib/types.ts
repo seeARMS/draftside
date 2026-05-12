@@ -11,12 +11,22 @@ export type RecordingTarget = "chat" | "editor";
 export type MultimodalInputType = "audio" | "image";
 export type VaultStatus = "disabled" | "locked" | "unlocked";
 export type VaultModalView = "intro" | "unlock" | "manage" | "disable";
+export type EditorFont =
+  | "geist"
+  | "inter"
+  | "helvetica"
+  | "open-sans"
+  | "charter"
+  | "georgia"
+  | "dm-mono"
+  | "geist-mono";
 
 export interface EditorUiPrefs {
   activeSessionId?: string;
   aiSidebarOpen?: boolean;
   aiTab?: AiTab;
   chatInput?: string;
+  editorFont?: EditorFont;
   focusMode?: boolean;
   liveAnalysis?: boolean;
   translationTarget?: string;

@@ -1,9 +1,20 @@
-import type { EditorUiPrefs } from "../lib/types";
+import type { EditorFont, EditorUiPrefs } from "../lib/types";
 import { TRANSLATION_LANGUAGES } from "../ai/constants";
 
 const ACTIVE_SESSION_KEY = "draftside.activeSessionId";
 const UI_PREFS_KEY = "draftside.uiPrefs";
 export const THEME_KEY = "draftside.theme";
+
+const EDITOR_FONT_VALUES = new Set<EditorFont>([
+  "geist",
+  "inter",
+  "helvetica",
+  "open-sans",
+  "charter",
+  "georgia",
+  "dm-mono",
+  "geist-mono",
+]);
 
 export function readStoredUiPrefs(): EditorUiPrefs {
   try {
@@ -16,6 +27,7 @@ export function readStoredUiPrefs(): EditorUiPrefs {
       aiSidebarOpen: typeof parsed.aiSidebarOpen === "boolean" ? parsed.aiSidebarOpen : undefined,
       aiTab: parsed.aiTab === "chat" || parsed.aiTab === "tools" ? parsed.aiTab : undefined,
       chatInput: typeof parsed.chatInput === "string" ? parsed.chatInput : undefined,
+      editorFont: EDITOR_FONT_VALUES.has(parsed.editorFont as EditorFont) ? (parsed.editorFont as EditorFont) : undefined,
       focusMode: typeof parsed.focusMode === "boolean" ? parsed.focusMode : undefined,
       liveAnalysis: typeof parsed.liveAnalysis === "boolean" ? parsed.liveAnalysis : undefined,
       translationTarget:

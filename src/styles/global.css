@@ -108,6 +108,42 @@
   }
 }
 
+.editor-font-inter .ProseMirror,
+.editor-font-inter-preview {
+  font-family: "Inter Variable", "Inter", system-ui, sans-serif;
+}
+
+.editor-font-helvetica .ProseMirror,
+.editor-font-helvetica-preview {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.editor-font-open-sans .ProseMirror,
+.editor-font-open-sans-preview {
+  font-family: "Open Sans Variable", "Open Sans", system-ui, sans-serif;
+}
+
+.editor-font-charter .ProseMirror,
+.editor-font-charter-preview {
+  font-family: ui-serif, "Charter", "Iowan Old Style", "Source Serif Pro", "Apple Garamond", Georgia, "Times New Roman", serif;
+}
+
+.editor-font-georgia .ProseMirror,
+.editor-font-georgia-preview {
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+}
+
+.editor-font-dm-mono .ProseMirror,
+.editor-font-dm-mono-preview {
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: -0.005em;
+}
+
+.editor-font-geist-mono .ProseMirror,
+.editor-font-geist-mono-preview {
+  font-family: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 @keyframes draftside-fade-up {
   from {
     opacity: 0;

@@ -26,12 +26,13 @@ import {
   Redo2,
   Sun,
   Trash2,
+  Type,
   Underline as UnderlineIcon,
   Undo2,
 } from "lucide-react";
 import type { RefObject } from "react";
 import type { Editor } from "@tiptap/core";
-import type { AiAction, Capabilities, RecordingTarget, ThemeMode, VaultStatus, WriteSession } from "../../../lib/types";
+import type { AiAction, Capabilities, EditorFont, RecordingTarget, ThemeMode, VaultStatus, WriteSession } from "../../../lib/types";
 import { cn } from "../../../lib/utils";
 import { iconButton } from "../tailwind";
 import { ToolbarButton } from "./ToolbarButton";
@@ -51,6 +52,8 @@ interface EditorToolbarProps {
   openVaultModal: () => void;
   focusMode: boolean;
   toggleFocusMode: () => void;
+  editorFont: EditorFont;
+  setEditorFont: (font: EditorFont) => void;
   aiSidebarOpen: boolean;
   toggleAiSidebar: () => void;
   postMenuOpen: boolean;
@@ -82,6 +85,8 @@ export function EditorToolbar(props: EditorToolbarProps) {
     openVaultModal,
     focusMode,
     toggleFocusMode,
+    editorFont,
+    setEditorFont,
     aiSidebarOpen,
     toggleAiSidebar,
     postMenuOpen,
@@ -184,7 +189,12 @@ export function EditorToolbar(props: EditorToolbarProps) {
             <Ellipsis size={18} />
           </button>
           {postMenuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[13.5rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)]" role="menu" aria-label="More actions">
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[14rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)]" role="menu" aria-label="More actions">
+              <div className="px-2 pb-1 pt-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground" role="presentation">
+                Appearance
+              </div>
+              <FontPicker editorFont={editorFont} setEditorFont={setEditorFont} />
+              <div className="my-1 h-px bg-border/70" role="separator" />
               <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={toggleTheme}>
                 {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
                 Switch to {theme === "dark" ? "light" : "dark"} mode
@@ -237,6 +247,74 @@ export function EditorToolbar(props: EditorToolbarProps) {
         >
           {aiSidebarOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
         </button>
+      </div>
+    </div>
+  );
+}
+
+const FONT_OPTIONS: Array<{ value: EditorFont; label: string; category: string; className: string }> = [
+  { value: "geist", label: "Geist", category: "Sans", className: "font-sans" },
+  { value: "inter", label: "Inter", category: "Sans", className: "editor-font-inter-preview" },
+  { value: "helvetica", label: "Helvetica", category: "Sans", className: "editor-font-helvetica-preview" },
+  { value: "open-sans", label: "Open Sans", category: "Sans", className: "editor-font-open-sans-preview" },
+  { value: "charter", label: "Charter", category: "Serif", className: "editor-font-charter-preview" },
+  { value: "georgia", label: "Georgia", category: "Serif", className: "editor-font-georgia-preview" },
+  { value: "dm-mono", label: "DM Mono", category: "Mono", className: "editor-font-dm-mono-preview" },
+  { value: "geist-mono", label: "Geist Mono", category: "Mono", className: "editor-font-geist-mono-preview" },
+];
+
+function FontPicker({
+  editorFont,
+  setEditorFont,
+}: {
+  editorFont: EditorFont;
+  setEditorFont: (font: EditorFont) => void;
+}) {
+  const current = FONT_OPTIONS.find((option) => option.value === editorFont) ?? FONT_OPTIONS[0];
+
+  return (
+    <div className="group/font relative">
+      <button
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+      >
+        <span className="inline-flex items-center gap-2.5">
+          <Type size={16} />
+          Font
+        </span>
+        <span className={cn("text-[0.8125rem] font-normal text-muted-foreground", current.className)}>{current.label}</span>
+      </button>
+      <div
+        className="pointer-events-none invisible absolute right-full top-0 z-[60] -mt-2 mr-1 grid min-w-[12rem] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground opacity-0 shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)] transition-opacity duration-100 group-hover/font:pointer-events-auto group-hover/font:visible group-hover/font:opacity-100 group-focus-within/font:pointer-events-auto group-focus-within/font:visible group-focus-within/font:opacity-100 max-[640px]:right-auto max-[640px]:left-0 max-[640px]:top-full max-[640px]:mt-1 max-[640px]:mr-0"
+        role="menu"
+        aria-label="Editor font"
+      >
+        {FONT_OPTIONS.map((option) => {
+          const isActive = option.value === editorFont;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="menuitemradio"
+              aria-checked={isActive}
+              onClick={() => setEditorFont(option.value)}
+              className={cn(
+                "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2.5 rounded-md border-0 bg-transparent p-2 text-left text-sm leading-5 text-foreground transition-colors hover:bg-muted",
+                isActive && "bg-muted",
+              )}
+            >
+              <span className="inline-flex size-4 items-center justify-center text-foreground" aria-hidden="true">
+                {isActive ? <Check size={14} /> : null}
+              </span>
+              <span className="grid gap-0.5">
+                <span className={cn("text-[0.9375rem] font-medium leading-5", option.className)}>{option.label}</span>
+                <span className="text-[0.6875rem] uppercase tracking-[0.08em] text-muted-foreground">{option.category}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

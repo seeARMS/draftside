@@ -566,6 +566,13 @@ export default function DraftsideEditor() {
     [setPrefs],
   );
 
+  const setEditorFont = useCallback(
+    (font: typeof prefs.editorFont) => {
+      setPrefs((current) => ({ ...current, editorFont: font }));
+    },
+    [setPrefs],
+  );
+
   const setTranslationTarget = useCallback(
     (next: string) => {
       setPrefs((current) => ({ ...current, translationTarget: next }));
@@ -718,6 +725,8 @@ export default function DraftsideEditor() {
           openVaultModal={() => vault.openVaultModal()}
           focusMode={prefs.focusMode}
           toggleFocusMode={toggleFocusMode}
+          editorFont={prefs.editorFont}
+          setEditorFont={setEditorFont}
           aiSidebarOpen={prefs.aiSidebarOpen}
           toggleAiSidebar={toggleAiSidebar}
           onOpenDrafts={() => setDraftsDrawerOpen(true)}
@@ -738,6 +747,7 @@ export default function DraftsideEditor() {
           editor={editor}
           vaultLocked={vaultLocked}
           ghostCompletionText={ghost.ghostCompletionText}
+          editorFont={prefs.editorFont}
           onUnlock={() => vault.openVaultModal("unlock")}
           onPointerUp={expression.handleEditorPointerUp}
           expressionTarget={expression.target}

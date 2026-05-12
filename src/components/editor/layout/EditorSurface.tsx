@@ -1,7 +1,8 @@
 import { Lock } from "lucide-react";
 import { EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
-import type { AiAction, ExpressionOption, ExpressionTarget } from "../../../lib/types";
+import type { AiAction, EditorFont, ExpressionOption, ExpressionTarget } from "../../../lib/types";
+import { cn } from "../../../lib/utils";
 import { Button } from "../../ui/button";
 import { ExpressionPopover } from "../popovers/ExpressionPopover";
 import type { TooltipPlacement } from "../hooks/useTooltip";
@@ -10,6 +11,7 @@ interface EditorSurfaceProps {
   editor: Editor | null;
   vaultLocked: boolean;
   ghostCompletionText: string;
+  editorFont: EditorFont;
   onUnlock: () => void;
   onPointerUp: (event: React.PointerEvent<HTMLElement>) => void;
   expressionTarget: ExpressionTarget | null;
@@ -29,6 +31,7 @@ export function EditorSurface({
   editor,
   vaultLocked,
   ghostCompletionText,
+  editorFont,
   onUnlock,
   onPointerUp,
   expressionTarget,
@@ -43,6 +46,7 @@ export function EditorSurface({
   tooltipProps,
   tightenTooltip,
 }: EditorSurfaceProps) {
+  const fontClass = editorFont === "geist" ? "" : `editor-font-${editorFont}`;
   return (
     <div className="min-h-0 flex-1 overflow-y-auto scroll-smooth">
       {vaultLocked ? (
@@ -57,7 +61,7 @@ export function EditorSurface({
           </Button>
         </section>
       ) : (
-        <article className="relative mx-auto box-border flex min-h-full w-[min(100%,44rem)] flex-col px-[clamp(1.5rem,4vw,3rem)] pb-[38vh] pt-[4.5rem] max-[1120px]:max-w-full max-[960px]:px-6 max-[960px]:pb-[32vh] max-[960px]:pt-8 max-[520px]:px-4 max-[520px]:pb-[28vh] max-[520px]:pt-5" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={onPointerUp}>
+        <article className={cn("relative mx-auto box-border flex min-h-full w-[min(100%,44rem)] flex-col px-[clamp(1.5rem,4vw,3rem)] pb-[38vh] pt-[4.5rem] max-[1120px]:max-w-full max-[960px]:px-6 max-[960px]:pb-[32vh] max-[960px]:pt-8 max-[520px]:px-4 max-[520px]:pb-[28vh] max-[520px]:pt-5", fontClass)} data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={onPointerUp}>
           <EditorContent editor={editor} />
           {expressionTarget ? (
             <ExpressionPopover
