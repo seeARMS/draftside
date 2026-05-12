@@ -551,7 +551,12 @@ export default function DraftsideEditor() {
   }, [setPrefs]);
 
   const toggleAiSidebar = useCallback(() => {
-    setPrefs((current) => ({ ...current, aiSidebarOpen: !current.aiSidebarOpen }));
+    setPrefs((current) => {
+      if (current.focusMode) {
+        return { ...current, focusMode: false, aiSidebarOpen: true };
+      }
+      return { ...current, aiSidebarOpen: !current.aiSidebarOpen };
+    });
   }, [setPrefs]);
 
   const setAiTab = useCallback(

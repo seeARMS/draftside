@@ -57,7 +57,7 @@ export function EditorSurface({
           </Button>
         </section>
       ) : (
-        <article className="relative box-border flex min-h-full w-[min(100%,54rem)] flex-col px-[clamp(1.5rem,5vw,4.5rem)] pb-[38vh] pt-[4.5rem] max-[1120px]:w-full max-[960px]:px-6 max-[960px]:pb-[32vh] max-[960px]:pt-8 max-[520px]:px-4 max-[520px]:pb-[28vh] max-[520px]:pt-5" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={onPointerUp}>
+        <article className="relative mx-auto box-border flex min-h-full w-[min(100%,44rem)] flex-col px-[clamp(1.5rem,4vw,3rem)] pb-[38vh] pt-[4.5rem] max-[1120px]:max-w-full max-[960px]:px-6 max-[960px]:pb-[32vh] max-[960px]:pt-8 max-[520px]:px-4 max-[520px]:pb-[28vh] max-[520px]:pt-5" data-ghost-completion={ghostCompletionText ? "ready" : undefined} onPointerUp={onPointerUp}>
           <EditorContent editor={editor} />
           {expressionTarget ? (
             <ExpressionPopover
