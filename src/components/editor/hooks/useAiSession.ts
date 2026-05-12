@@ -94,6 +94,22 @@ export function useAiSession({ setAiStatus, setModelInfo, setAiError, setAiProgr
     }
   }, [setAiError, setAiProgress, setAiStatus, setModelInfo]);
 
+  const createLanguageModelTask = useCallback(async (signal?: AbortSignal) => {
+    const baseSession = await ensureLanguageModel();
+
+    try {
+      return await baseSession.clone({ signal });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+
+      return LanguageModel.create({
+        ...LANGUAGE_MODEL_OPTIONS,
+        initialPrompts: [{ role: "system", content: MULTIMODAL_SYSTEM_PROMPT }],
+        signal,
+      });
+    }
+  }, [ensureLanguageModel]);
+
   const ensureMultimodalLanguageModel = useCallback(async (inputTypes: MultimodalInputType[]) => {
     const key = multimodalKey(inputTypes);
     const existing = multimodalModelsRef.current.get(key);
@@ -145,6 +161,25 @@ export function useAiSession({ setAiStatus, setModelInfo, setAiError, setAiProgr
       setAiProgress(null);
     }
   }, [setAiProgress]);
+
+  const createMultimodalLanguageModelTask = useCallback(
+    async (inputTypes: MultimodalInputType[], signal?: AbortSignal) => {
+      const baseSession = await ensureMultimodalLanguageModel(inputTypes);
+
+      try {
+        return await baseSession.clone({ signal });
+      } catch (error) {
+        if (signal?.aborted) throw error;
+
+        return LanguageModel.create({
+          ...buildMultimodalOptions(inputTypes),
+          initialPrompts: [{ role: "system", content: MULTIMODAL_SYSTEM_PROMPT }],
+          signal,
+        });
+      }
+    },
+    [ensureMultimodalLanguageModel],
+  );
 
   const destroyAllModels = useCallback(() => {
     languageModelRef.current?.destroy();
@@ -217,8 +252,9 @@ export function useAiSession({ setAiStatus, setModelInfo, setAiError, setAiProgr
     creatingModelRef,
     ensureLanguageModel,
     ensureMultimodalLanguageModel,
+    createLanguageModelTask,
+    createMultimodalLanguageModelTask,
     destroyAllModels,
     refreshModelInfo,
   };
 }
-

@@ -25,8 +25,8 @@ interface UseChatOptions {
   recordingTarget: RecordingTarget | null;
   activeSessionRef: React.MutableRefObject<WriteSession | null>;
   persistChatMessages: (messages: ChatMessage[]) => void;
-  ensureLanguageModel: () => Promise<LanguageModel>;
-  ensureMultimodalLanguageModel: (inputTypes: MultimodalInputType[]) => Promise<LanguageModel>;
+  createLanguageModelTask: (signal?: AbortSignal) => Promise<LanguageModel>;
+  createMultimodalLanguageModelTask: (inputTypes: MultimodalInputType[], signal?: AbortSignal) => Promise<LanguageModel>;
   scheduleSave: (editor: Editor) => void;
   setGhostCompletionText: (next: string) => void;
   completionRequestRef: React.MutableRefObject<number>;
@@ -45,8 +45,8 @@ export function useChat(options: UseChatOptions) {
     recordingTarget,
     activeSessionRef,
     persistChatMessages,
-    ensureLanguageModel,
-    ensureMultimodalLanguageModel,
+    createLanguageModelTask,
+    createMultimodalLanguageModelTask,
     scheduleSave,
     setGhostCompletionText,
     completionRequestRef,
@@ -162,8 +162,13 @@ export function useChat(options: UseChatOptions) {
     setAiAction("chat");
 
     try {
-      const model = images.length ? await ensureMultimodalLanguageModel(["image"]) : await ensureLanguageModel();
-      const raw = await promptChatModel(model, modelPrompt, images);
+      const model = images.length ? await createMultimodalLanguageModelTask(["image"]) : await createLanguageModelTask();
+      let raw = "";
+      try {
+        raw = await promptChatModel(model, modelPrompt, images);
+      } finally {
+        model.destroy();
+      }
       const parsed = parseChatResponse(raw);
       const appliedUpdate = parsed.draftUpdate && activeSessionRef.current?.id === session.id ? parsed.draftUpdate : null;
 
@@ -211,8 +216,8 @@ export function useChat(options: UseChatOptions) {
     chatImages,
     chatInput,
     editor,
-    ensureLanguageModel,
-    ensureMultimodalLanguageModel,
+    createLanguageModelTask,
+    createMultimodalLanguageModelTask,
     openSidebarChat,
     persistChatMessages,
     recordingTarget,

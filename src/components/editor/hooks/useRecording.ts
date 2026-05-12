@@ -9,7 +9,7 @@ import { clearEditorGhostCompletion } from "../../../tiptap/ghostCompletion";
 interface UseRecordingOptions {
   editor: Editor | null;
   scheduleSave: (editor: Editor) => void;
-  ensureMultimodalLanguageModel: (inputTypes: MultimodalInputType[]) => Promise<LanguageModel>;
+  createMultimodalLanguageModelTask: (inputTypes: MultimodalInputType[], signal?: AbortSignal) => Promise<LanguageModel>;
   setAiAction: (action: "transcribe" | null) => void;
   setAiError: (message: string) => void;
   setChatError: (message: string) => void;
@@ -24,7 +24,7 @@ export function useRecording(options: UseRecordingOptions) {
   const {
     editor,
     scheduleSave,
-    ensureMultimodalLanguageModel,
+    createMultimodalLanguageModelTask,
     setAiAction,
     setAiError,
     setChatError,
@@ -42,20 +42,25 @@ export function useRecording(options: UseRecordingOptions) {
 
   const transcribeAudio = useCallback(
     async (audio: Blob) => {
-      const model = await ensureMultimodalLanguageModel(["audio"]);
-      const result = await model.prompt([
-        {
-          role: "user",
-          content: [
-            { type: "text", value: TRANSCRIBE_PROMPT },
-            { type: "audio", value: asModelContentValue(audio) },
-          ],
-        },
-      ]);
+      const model = await createMultimodalLanguageModelTask(["audio"]);
+      let result = "";
+      try {
+        result = await model.prompt([
+          {
+            role: "user",
+            content: [
+              { type: "text", value: TRANSCRIBE_PROMPT },
+              { type: "audio", value: asModelContentValue(audio) },
+            ],
+          },
+        ]);
+      } finally {
+        model.destroy();
+      }
 
       return stripJsonFences(result).trim();
     },
-    [ensureMultimodalLanguageModel],
+    [createMultimodalLanguageModelTask],
   );
 
   const handleRecordedAudio = useCallback(

@@ -84,6 +84,7 @@ export function useSessions(vaultKeyRef: React.MutableRefObject<CryptoKey | null
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
       setSaveState("saving");
       saveTimerRef.current = window.setTimeout(() => {
+        saveTimerRef.current = null;
         void persistEditor(editor);
       }, 420);
     },

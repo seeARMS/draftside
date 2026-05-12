@@ -16,7 +16,7 @@ interface UseAmbientClassifierOptions {
   setActiveSession: React.Dispatch<React.SetStateAction<WriteSession | null>>;
   setSessions: React.Dispatch<React.SetStateAction<WriteSession[]>>;
   saveSession: (session: WriteSession) => Promise<void>;
-  ensureLanguageModel: () => Promise<LanguageModel>;
+  createLanguageModelTask: (signal?: AbortSignal) => Promise<LanguageModel>;
   detectLanguage: (text: string) => Promise<void>;
   completionTick: number;
 }
@@ -33,7 +33,7 @@ export function useAmbientClassifier(options: UseAmbientClassifierOptions) {
     setActiveSession,
     setSessions,
     saveSession,
-    ensureLanguageModel,
+    createLanguageModelTask,
     detectLanguage,
     completionTick,
   } = options;
@@ -59,9 +59,10 @@ export function useAmbientClassifier(options: UseAmbientClassifierOptions) {
 
       setStatus("thinking");
       void detectLanguage(text);
+      let model: LanguageModel | null = null;
 
       try {
-        const model = await ensureLanguageModel();
+        model = await createLanguageModelTask(controller.signal);
         if (controller.signal.aborted || ambientRequestRef.current !== requestId) return;
 
         const result = await model.prompt(
@@ -100,12 +101,13 @@ export function useAmbientClassifier(options: UseAmbientClassifierOptions) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setStatus("error");
       } finally {
+        model?.destroy();
         if (ambientAbortRef.current === controller) {
           ambientAbortRef.current = null;
         }
       }
     },
-    [activeSessionRef, detectLanguage, ensureLanguageModel, saveSession, setActiveSession, setSessions],
+    [activeSessionRef, createLanguageModelTask, detectLanguage, saveSession, setActiveSession, setSessions],
   );
 
   useEffect(() => {

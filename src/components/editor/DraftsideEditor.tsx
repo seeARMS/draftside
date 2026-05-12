@@ -97,7 +97,15 @@ export default function DraftsideEditor() {
     setAiError,
     setAiProgress,
   });
-  const { ensureLanguageModel, ensureMultimodalLanguageModel, refreshModelInfo, languageModelRef, creatingModelRef, destroyAllModels } = aiSession;
+  const {
+    ensureLanguageModel,
+    refreshModelInfo,
+    languageModelRef,
+    creatingModelRef,
+    createLanguageModelTask,
+    createMultimodalLanguageModelTask,
+    destroyAllModels,
+  } = aiSession;
 
   const { offlineInfo, refreshOfflineInfo } = useOfflineInfo({ online, storagePersisted });
 
@@ -115,6 +123,7 @@ export default function DraftsideEditor() {
     saveTimerRef,
     saveSession,
     scheduleSave,
+    persistEditor,
     persistChatMessages,
     hydrateFromStorage,
     hydrateLocked,
@@ -244,6 +253,7 @@ export default function DraftsideEditor() {
 
     storeActiveSessionId(activeSession.id);
     skipUpdateRef.current = true;
+    clearEditorGhostCompletion(editor);
     editor.commands.setContent(activeSession.content);
     window.queueMicrotask(() => {
       skipUpdateRef.current = false;
@@ -300,7 +310,7 @@ export default function DraftsideEditor() {
     setAiError,
     setAiOutput,
     setAiProgress,
-    ensureLanguageModel,
+    createLanguageModelTask,
     scheduleSave,
     translationTarget: prefs.translationTarget,
   });
@@ -309,7 +319,7 @@ export default function DraftsideEditor() {
   const expression = useExpressionPopover({
     editor,
     vaultLocked,
-    ensureLanguageModel,
+    createLanguageModelTask,
     scheduleSave,
   });
 
@@ -321,8 +331,9 @@ export default function DraftsideEditor() {
     expressionTargetActive: Boolean(expression.target),
     postMenuOpen,
     vaultLocked,
+    activeSessionId: activeSession?.id,
     completionTick,
-    ensureLanguageModel,
+    createLanguageModelTask,
   });
 
   // Wire setter refs (used by editor onUpdate handler)
@@ -347,7 +358,7 @@ export default function DraftsideEditor() {
     setActiveSession,
     setSessions,
     saveSession,
-    ensureLanguageModel,
+    createLanguageModelTask,
     detectLanguage: aiTools.detectLanguage,
     completionTick,
   });
@@ -362,8 +373,8 @@ export default function DraftsideEditor() {
     recordingTarget: null, // wired below after recording is constructed
     activeSessionRef,
     persistChatMessages,
-    ensureLanguageModel,
-    ensureMultimodalLanguageModel,
+    createLanguageModelTask,
+    createMultimodalLanguageModelTask,
     scheduleSave,
     setGhostCompletionText: ghost.setGhostCompletionText,
     completionRequestRef: ghost.completionRequestRef,
@@ -383,7 +394,7 @@ export default function DraftsideEditor() {
   const recording = useRecording({
     editor,
     scheduleSave,
-    ensureMultimodalLanguageModel,
+    createMultimodalLanguageModelTask,
     setAiAction: setAiAction as (action: "transcribe" | null) => void,
     setAiError,
     setChatError: chat.setChatError,
@@ -475,27 +486,42 @@ export default function DraftsideEditor() {
   const installStatusLabel = pwa.pwaInstalled ? "installed" : pwa.installPrompt ? "ready" : offlineReady ? "browser menu" : "setting up";
 
   // Toolbar/sessions actions
+  const flushActiveSession = useCallback(async () => {
+    if (!editor || !activeSessionRef.current) return;
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    await persistEditor(editor);
+  }, [activeSessionRef, editor, persistEditor, saveTimerRef]);
+
   const handleCreateSession = useCallback(async () => {
     if (vaultLocked) {
       vault.openVaultModal("unlock");
       return;
     }
+    await flushActiveSession();
     await createSession();
     setAiOutput("");
     setAiError("");
     chat.setChatError("");
     setDraftsDrawerOpen(false);
-  }, [chat, createSession, vault, vaultLocked]);
+  }, [chat, createSession, flushActiveSession, vault, vaultLocked]);
 
   const handleSelectSession = useCallback(
-    (session: WriteSession) => {
+    async (session: WriteSession) => {
+      if (session.id === activeSessionRef.current?.id) {
+        setDraftsDrawerOpen(false);
+        return;
+      }
+      await flushActiveSession();
       selectSession(session);
       setAiOutput("");
       setAiError("");
       chat.setChatError("");
       setDraftsDrawerOpen(false);
     },
-    [chat, selectSession],
+    [activeSessionRef, chat, flushActiveSession, selectSession],
   );
 
   const requestDeleteSession = useCallback((session: WriteSession) => {
@@ -506,10 +532,11 @@ export default function DraftsideEditor() {
   const confirmDeleteSession = useCallback(async () => {
     if (!deleteTarget) return;
     setPostMenuOpen(false);
+    await flushActiveSession();
     await deleteSession(deleteTarget.id);
     setDeleteTarget(null);
     chat.setChatError("");
-  }, [chat, deleteSession, deleteTarget]);
+  }, [chat, deleteSession, deleteTarget, flushActiveSession]);
 
   const getCurrentDoc = useCallback(() => editor?.getJSON() ?? activeSession?.content ?? EMPTY_DOC, [activeSession?.content, editor]);
 

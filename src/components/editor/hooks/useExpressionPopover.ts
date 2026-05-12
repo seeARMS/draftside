@@ -8,11 +8,11 @@ import { parseExpressionOptions } from "../../../ai/parse";
 interface UseExpressionPopoverOptions {
   editor: Editor | null;
   vaultLocked: boolean;
-  ensureLanguageModel: () => Promise<LanguageModel>;
+  createLanguageModelTask: (signal?: AbortSignal) => Promise<LanguageModel>;
   scheduleSave: (editor: Editor) => void;
 }
 
-export function useExpressionPopover({ editor, vaultLocked, ensureLanguageModel, scheduleSave }: UseExpressionPopoverOptions) {
+export function useExpressionPopover({ editor, vaultLocked, createLanguageModelTask, scheduleSave }: UseExpressionPopoverOptions) {
   const [target, setTarget] = useState<ExpressionTarget | null>(null);
   const [options, setOptions] = useState<ExpressionOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,10 +44,15 @@ export function useExpressionPopover({ editor, vaultLocked, ensureLanguageModel,
         const contextFrom = Math.max(0, next.from - 240);
         const contextTo = Math.min(docSize, next.to + 240);
         const context = editor.state.doc.textBetween(contextFrom, contextTo, " ").replace(/\s+/g, " ").trim();
-        const model = await ensureLanguageModel();
-        const result = await model.prompt([
-          { role: "user", content: buildExpressionPrompt(next.text, context) },
-        ]);
+        const model = await createLanguageModelTask();
+        let result = "";
+        try {
+          result = await model.prompt([
+            { role: "user", content: buildExpressionPrompt(next.text, context) },
+          ]);
+        } finally {
+          model.destroy();
+        }
         const parsed = parseExpressionOptions(result, next.text);
 
         if (requestRef.current !== requestId) return;
@@ -66,7 +71,7 @@ export function useExpressionPopover({ editor, vaultLocked, ensureLanguageModel,
         }
       }
     },
-    [editor, ensureLanguageModel],
+    [editor, createLanguageModelTask],
   );
 
   const handleEditorPointerUp = useCallback(

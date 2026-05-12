@@ -15,7 +15,7 @@ interface UseAiToolsOptions {
   setAiError: (message: string) => void;
   setAiOutput: (next: string | ((current: string) => string)) => void;
   setAiProgress: (next: number | null) => void;
-  ensureLanguageModel: () => Promise<LanguageModel>;
+  createLanguageModelTask: (signal?: AbortSignal) => Promise<LanguageModel>;
   scheduleSave: (editor: Editor) => void;
   translationTarget: string;
 }
@@ -31,7 +31,7 @@ export function useAiTools(options: UseAiToolsOptions) {
     setAiError,
     setAiOutput,
     setAiProgress,
-    ensureLanguageModel,
+    createLanguageModelTask,
     scheduleSave,
     translationTarget,
   } = options;
@@ -241,11 +241,15 @@ export function useAiTools(options: UseAiToolsOptions) {
       }
 
       if (!result) {
-        const model = await ensureLanguageModel();
-        const stream = model.promptStreaming([
-          { role: "user", content: buildTightenPrompt(truncateForModel(text, 4200)) },
-        ]);
-        result = await readTextStream(stream, setAiOutput);
+        const model = await createLanguageModelTask();
+        try {
+          const stream = model.promptStreaming([
+            { role: "user", content: buildTightenPrompt(truncateForModel(text, 4200)) },
+          ]);
+          result = await readTextStream(stream, setAiOutput);
+        } finally {
+          model.destroy();
+        }
       }
 
       replaceSelectionOrInsert(result.trim());
@@ -257,7 +261,7 @@ export function useAiTools(options: UseAiToolsOptions) {
     }
   }, [
     capabilities.rewriter,
-    ensureLanguageModel,
+    createLanguageModelTask,
     replaceSelectionOrInsert,
     selection.text,
     setAiAction,

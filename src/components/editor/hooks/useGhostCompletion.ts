@@ -15,8 +15,9 @@ interface UseGhostCompletionOptions {
   expressionTargetActive: boolean;
   postMenuOpen: boolean;
   vaultLocked: boolean;
+  activeSessionId?: string | null;
   completionTick: number;
-  ensureLanguageModel: () => Promise<LanguageModel>;
+  createLanguageModelTask: (signal?: AbortSignal) => Promise<LanguageModel>;
 }
 
 export function useGhostCompletion({
@@ -26,8 +27,9 @@ export function useGhostCompletion({
   expressionTargetActive,
   postMenuOpen,
   vaultLocked,
+  activeSessionId,
   completionTick,
-  ensureLanguageModel,
+  createLanguageModelTask,
 }: UseGhostCompletionOptions) {
   const [ghostCompletionText, setGhostCompletionText] = useState("");
   const completionTimerRef = useRef<number | null>(null);
@@ -38,6 +40,17 @@ export function useGhostCompletion({
     setGhostCompletionText("");
     completionRequestRef.current += 1;
   };
+
+  useEffect(() => {
+    if (!editor) return;
+    if (completionTimerRef.current) {
+      window.clearTimeout(completionTimerRef.current);
+      completionTimerRef.current = null;
+    }
+    clearEditorGhostCompletion(editor);
+    setGhostCompletionText("");
+    completionRequestRef.current += 1;
+  }, [editor, activeSessionId]);
 
   useEffect(() => {
     if (completionTimerRef.current) window.clearTimeout(completionTimerRef.current);
@@ -64,6 +77,8 @@ export function useGhostCompletion({
     completionRequestRef.current = requestId;
 
     completionTimerRef.current = window.setTimeout(async () => {
+      completionTimerRef.current = null;
+      let model: LanguageModel | null = null;
       const liveContext = getCompletionContext(editor);
       if (
         completionRequestRef.current !== requestId ||
@@ -76,7 +91,7 @@ export function useGhostCompletion({
       }
 
       try {
-        const model = await ensureLanguageModel();
+        model = await createLanguageModelTask();
         if (completionRequestRef.current !== requestId) return;
 
         const result = await model.prompt([
@@ -104,6 +119,8 @@ export function useGhostCompletion({
           clearEditorGhostCompletion(editor);
           setGhostCompletionText("");
         }
+      } finally {
+        model?.destroy();
       }
     }, 1000);
 
@@ -111,7 +128,7 @@ export function useGhostCompletion({
       if (completionTimerRef.current) window.clearTimeout(completionTimerRef.current);
       completionRequestRef.current += 1;
     };
-  }, [editor, enabled, expressionTargetActive, postMenuOpen, vaultLocked, selectionEmpty, completionTick, ensureLanguageModel]);
+  }, [editor, enabled, expressionTargetActive, postMenuOpen, vaultLocked, selectionEmpty, activeSessionId, completionTick, createLanguageModelTask]);
 
   return {
     ghostCompletionText,
