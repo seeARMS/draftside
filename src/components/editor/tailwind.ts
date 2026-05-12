@@ -49,7 +49,7 @@ export const proseMirrorClass = cn(
   "[&_h1]:mt-[1.4em] [&_h1]:mb-[0.35em] [&_h1]:text-3xl [&_h1]:font-medium [&_h1]:leading-tight max-[820px]:[&_h1]:text-[1.75rem] max-[520px]:[&_h1]:text-[1.5rem]",
   "[&_h2]:mt-[1.4em] [&_h2]:mb-[0.35em] [&_h2]:text-2xl [&_h2]:font-medium [&_h2]:leading-tight",
   "[&_h3]:mt-[1.4em] [&_h3]:mb-[0.35em] [&_h3]:text-xl [&_h3]:font-medium [&_h3]:leading-tight",
-  "[&_ul]:pl-[1.625em] [&_ol]:pl-[1.625em] [&_li]:pl-1",
+  "[&_ul]:list-disc [&_ol]:list-decimal [&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square] [&_ul]:pl-[1.625em] [&_ol]:pl-[1.625em] [&_li]:pl-1",
   "[&_blockquote]:relative [&_blockquote]:ml-0 [&_blockquote]:border-l-0 [&_blockquote]:py-[0.5em] [&_blockquote]:pl-[1.5em] [&_blockquote]:font-medium [&_blockquote]:text-foreground",
   "[&_blockquote]:after:absolute [&_blockquote]:after:left-0 [&_blockquote]:after:top-[0.5em] [&_blockquote]:after:h-[1.75em] [&_blockquote]:after:w-[0.25em] [&_blockquote]:after:rounded-sm [&_blockquote]:after:bg-border [&_blockquote]:after:content-['']",
   "[&_code]:rounded [&_code]:bg-foreground/10 [&_code]:px-[0.3em] [&_code]:py-[0.15em] [&_code]:font-mono [&_code]:text-[0.875em] [&_code]:font-medium [&_code]:text-foreground",
