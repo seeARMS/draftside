@@ -175,7 +175,7 @@ export function OnboardingDialog(props: OnboardingDialogProps) {
       }}
     >
       <div
-        className="grid w-[min(32rem,100%)] max-h-[min(44rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover px-6 py-5 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_30px_80px_hsl(var(--foreground)/0.18)] max-[540px]:px-4 max-[540px]:pb-5 max-[540px]:pt-4"
+        className="grid w-[min(32rem,100%)] max-h-[min(44rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover px-6 py-5 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_30px_80px_hsl(var(--shadow-color)/0.18)] max-[540px]:px-4 max-[540px]:pb-5 max-[540px]:pt-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"

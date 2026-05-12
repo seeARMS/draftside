@@ -54,6 +54,7 @@
   --input: 0 0% 91%;
   --ring: 0 0% 56%;
   --radius: 0.625rem;
+  --shadow-color: 0 0% 14%;
 }
 
 .dark {
@@ -76,6 +77,7 @@
   --border: 0 0% 22%;
   --input: 0 0% 22%;
   --ring: 0 0% 70%;
+  --shadow-color: 0 0% 0%;
 }
 
 @layer base {

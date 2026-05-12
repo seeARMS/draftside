@@ -13,8 +13,9 @@ interface UiPrefsState {
 
 function initialPrefs(): UiPrefsState {
   const stored = readStoredUiPrefs();
+  const isWideViewport = typeof window !== "undefined" && window.innerWidth > 1120;
   return {
-    aiSidebarOpen: stored.aiSidebarOpen ?? true,
+    aiSidebarOpen: stored.aiSidebarOpen ?? isWideViewport,
     aiTab: stored.aiTab ?? "tools",
     focusMode: stored.focusMode ?? false,
     liveAnalysis: stored.liveAnalysis ?? true,

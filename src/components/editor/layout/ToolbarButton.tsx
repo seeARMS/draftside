@@ -18,7 +18,7 @@ export function ToolbarButton({ label, active = false, disabled = false, onClick
       type="button"
       variant="ghost"
       size="iconSm"
-      className={cn("text-muted-foreground max-[520px]:size-8", active && "bg-muted text-foreground")}
+      className={cn("text-muted-foreground max-[520px]:size-10 max-[520px]:[&_svg]:!size-5", active && "bg-muted text-foreground")}
       aria-label={label}
       disabled={disabled}
       onClick={onClick}

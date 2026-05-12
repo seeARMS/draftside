@@ -15,6 +15,10 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
+  "related_applications": [
+    { "platform": "webapp", "url": "https://draftside.ai/site.webmanifest" }
+  ],
   "shortcuts": [
     {
       "name": "Open editor",

@@ -20,7 +20,7 @@ export function ConfirmDeleteDialog({ busy, confirmDelete, setDeleteTarget, targ
         if (event.target === event.currentTarget) setDeleteTarget(null);
       }}
     >
-      <div className="grid w-[min(25rem,100%)] grid-cols-[2.5rem_minmax(0,1fr)] gap-3.5 rounded-xl bg-popover p-4 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_24px_70px_hsl(var(--foreground)/0.16)]" role="dialog" aria-modal="true" aria-labelledby="delete-draft-title" aria-describedby="delete-draft-description">
+      <div className="grid w-[min(25rem,100%)] grid-cols-[2.5rem_minmax(0,1fr)] gap-3.5 rounded-xl bg-popover p-4 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_24px_70px_hsl(var(--shadow-color)/0.16)]" role="dialog" aria-modal="true" aria-labelledby="delete-draft-title" aria-describedby="delete-draft-description">
         <div className="inline-flex size-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive" aria-hidden="true">
           <Trash2 size={18} />
         </div>

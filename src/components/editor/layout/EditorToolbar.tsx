@@ -184,7 +184,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
             <Ellipsis size={18} />
           </button>
           {postMenuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[13.5rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--foreground)/0.12)]" role="menu" aria-label="More actions">
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[13.5rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)]" role="menu" aria-label="More actions">
               <button type="button" role="menuitem" className="flex min-h-9 items-center gap-2.5 whitespace-nowrap rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50" onClick={toggleTheme}>
                 {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
                 Switch to {theme === "dark" ? "light" : "dark"} mode

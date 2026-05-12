@@ -43,7 +43,7 @@ function DrawerContent({ className, children, ...props }: React.ComponentProps<t
           "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[88svh] data-[vaul-drawer-direction=bottom]:rounded-t-2xl data-[vaul-drawer-direction=bottom]:border-t",
           "data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-[min(22rem,calc(100vw-3rem))] data-[vaul-drawer-direction=right]:border-l",
           "data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-[min(20rem,calc(100vw-3rem))] data-[vaul-drawer-direction=left]:border-r",
-          "border-border/70 shadow-[0_24px_78px_hsl(var(--foreground)/0.22)] outline-none",
+          "border-border/70 shadow-[0_24px_78px_hsl(var(--shadow-color)/0.22)] outline-none",
           className,
         )}
         {...props}

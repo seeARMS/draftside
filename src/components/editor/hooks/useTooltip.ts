@@ -29,11 +29,16 @@ export function useTooltip() {
     const label = element.dataset.tooltip;
     if (!label) return;
 
-    const placement = (element.dataset.tooltipPlacement as TooltipPlacement | undefined) ?? "top";
+    let placement = (element.dataset.tooltipPlacement as TooltipPlacement | undefined) ?? "top";
     const size = element.dataset.tooltipSize === "wide" ? "wide" : undefined;
     const rect = element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
+
+    const isCompactViewport = typeof window !== "undefined" && window.innerWidth <= 520;
+    if (isCompactViewport && (placement === "left" || placement === "right")) {
+      placement = rect.top < window.innerHeight / 2 ? "bottom" : "top";
+    }
 
     setActiveTooltip({
       label,

@@ -2,7 +2,7 @@ import { cn } from "../../lib/utils";
 
 export const iconButton = (active?: boolean, className?: string) =>
   cn(
-    "inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground max-[520px]:size-9",
+    "inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground max-[520px]:size-11 max-[520px]:[&_svg]:!size-5",
     active && "bg-muted text-foreground",
     className,
   );
@@ -35,7 +35,7 @@ export const statusPill = (state: "default" | "ok" | "danger" = "default", class
   );
 
 export const popoverShell =
-  "pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-0 z-50 grid w-[min(22rem,calc(100vw-1.5rem))] translate-y-1 gap-3 rounded-xl bg-popover p-3.5 text-popover-foreground opacity-0 shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--foreground)/0.12)] transition duration-100 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 after:absolute after:bottom-[-0.4rem] after:left-4 after:size-3 after:rotate-45 after:border-b after:border-r after:border-border after:bg-popover";
+  "pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-0 z-50 grid w-[min(22rem,calc(100vw-1.5rem))] translate-y-1 gap-3 rounded-xl bg-popover p-3.5 text-popover-foreground opacity-0 shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)] transition duration-100 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 after:absolute after:bottom-[-0.4rem] after:left-4 after:size-3 after:rotate-45 after:border-b after:border-r after:border-border after:bg-popover max-[520px]:fixed max-[520px]:inset-x-3 max-[520px]:bottom-20 max-[520px]:left-auto max-[520px]:w-auto max-[520px]:max-w-[24rem] max-[520px]:max-h-[70svh] max-[520px]:overflow-y-auto max-[520px]:mx-auto max-[520px]:after:hidden";
 
 export const popoverTitle =
   "flex items-start justify-between gap-3 text-sm font-semibold leading-tight text-foreground [&>span:last-child]:min-h-6 [&>span:last-child]:rounded-md [&>span:last-child]:bg-muted/70 [&>span:last-child]:px-2 [&>span:last-child]:py-1 [&>span:last-child]:text-xs [&>span:last-child]:font-medium [&>span:last-child]:leading-4 [&>span:last-child]:text-muted-foreground";
@@ -47,7 +47,7 @@ export const overlay =
   "fixed inset-0 z-[80] grid place-items-center bg-background/50 p-4 backdrop-blur-md";
 
 export const dialogShell =
-  "grid w-[min(32rem,100%)] max-h-[min(42rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover p-4 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_24px_78px_hsl(var(--foreground)/0.16)] max-[520px]:max-h-[calc(100svh-1rem)] max-[520px]:rounded-xl max-[520px]:p-3";
+  "grid w-[min(32rem,100%)] max-h-[min(42rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover p-4 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_24px_78px_hsl(var(--shadow-color)/0.16)] max-[520px]:max-h-[calc(100svh-1rem)] max-[520px]:rounded-xl max-[520px]:p-3";
 
 export const proseMirrorClass = cn(
   "min-h-0 flex-1 outline-none caret-foreground text-foreground font-sans text-base leading-7 tracking-normal selection:bg-foreground/10",
