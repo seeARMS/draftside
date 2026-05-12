@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, Fragment } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDownToLine,
   ArrowLeft,
-  Check,
   CheckCircle2,
   Cloud,
   Download,
@@ -11,7 +10,6 @@ import {
   Globe,
   Loader2,
   Lock,
-  Sparkles,
   WifiOff,
 } from "lucide-react";
 import type { AiStatus, ModelRuntimeInfo } from "../../../lib/types";
@@ -37,11 +35,11 @@ interface OnboardingDialogProps {
 
 type StepId = "welcome" | "ai" | "install" | "ready";
 
-const STEPS: ReadonlyArray<{ id: StepId; label: string }> = [
-  { id: "welcome", label: "Welcome" },
-  { id: "ai", label: "Local AI" },
-  { id: "install", label: "Install" },
-  { id: "ready", label: "Ready" },
+const STEPS: ReadonlyArray<{ id: StepId }> = [
+  { id: "welcome" },
+  { id: "ai" },
+  { id: "install" },
+  { id: "ready" },
 ];
 
 type AiStage =
@@ -79,10 +77,10 @@ function resolveAiStage({
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), textarea:not([disabled])';
 
-const headingClass = "m-0 text-lg font-semibold leading-snug text-foreground";
-const copyClass = "m-0 text-sm leading-6 text-muted-foreground";
-const iconClass = "inline-flex size-10 items-center justify-center rounded-lg";
-const actionsClass = "flex flex-wrap items-center justify-end gap-2 pt-1 max-[540px]:flex-col-reverse max-[540px]:items-stretch";
+const headlineClass = "m-0 text-balance text-[1.6rem] font-semibold leading-[1.15] tracking-[-0.01em] text-foreground max-[540px]:text-[1.375rem]";
+const eyebrowClass = "text-[0.7rem] font-medium uppercase tracking-[0.14em] text-muted-foreground";
+const copyClass = "m-0 text-[0.9375rem] leading-7 text-muted-foreground";
+const actionsClass = "mt-2 flex flex-wrap items-center justify-end gap-2 max-[540px]:flex-col-reverse max-[540px]:items-stretch";
 
 function useDialogFocus(stepId: StepId) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -209,159 +207,109 @@ export function OnboardingDialog(props: OnboardingDialogProps) {
       }}
     >
       <div
-        className="grid w-[min(34rem,100%)] max-h-[min(44rem,calc(100svh-2rem))] gap-4 overflow-y-auto rounded-2xl bg-popover px-6 py-5 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_30px_80px_hsl(var(--shadow-color)/0.18)] max-[540px]:px-4 max-[540px]:pb-5 max-[540px]:pt-4"
+        className="grid w-[min(34rem,100%)] max-h-[min(46rem,calc(100svh-2rem))] overflow-hidden rounded-3xl bg-popover text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_30px_80px_hsl(var(--shadow-color)/0.18)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
         ref={dialogRef}
       >
-        <header className="flex items-center justify-between gap-3">
-          {canGoBack ? (
+        <ProgressBar currentIndex={stepIndex} total={STEPS.length} />
+
+        <div className="grid gap-7 overflow-y-auto px-8 pb-8 pt-6 max-[540px]:gap-6 max-[540px]:px-5 max-[540px]:pb-6 max-[540px]:pt-5">
+          <header className="flex items-center justify-between gap-3">
+            {canGoBack ? (
+              <button
+                type="button"
+                className="inline-flex h-8 items-center gap-1 rounded-md border-0 bg-transparent px-1.5 -ml-1.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={goBack}
+                aria-label="Go back to previous step"
+              >
+                <ArrowLeft size={14} />
+                Back
+              </button>
+            ) : (
+              <span aria-hidden="true" className="h-8" />
+            )}
+            <span className={eyebrowClass} aria-live="polite">
+              Step {stepIndex + 1} of {STEPS.length}
+            </span>
             <button
               type="button"
-              className="inline-flex h-8 items-center gap-1 rounded-md border-0 bg-transparent px-1.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              onClick={goBack}
-              aria-label="Go back to previous step"
+              className="rounded-md border-0 bg-transparent px-2 py-1 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground -mr-1.5"
+              onClick={onDismiss}
+              aria-label="Skip onboarding and continue to editor"
             >
-              <ArrowLeft size={14} />
-              Back
+              Skip
             </button>
+          </header>
+
+          {stepId === "welcome" ? (
+            <WelcomePanel onNext={goNext} />
+          ) : stepId === "ai" ? (
+            <AiPanel
+              stage={aiStage}
+              aiProgress={aiProgress}
+              modelInfo={modelInfo}
+              refreshing={refreshing}
+              downloadStarting={downloadStarting}
+              onStartDownload={handleStartDownload}
+              onRefresh={handleRefresh}
+              onNext={goNext}
+            />
+          ) : stepId === "install" ? (
+            <InstallPanel
+              platform={platform}
+              pwaInstalled={pwaInstalled}
+              pwaInstallAvailable={pwaInstallAvailable}
+              installing={installing}
+              onInstall={handleInstall}
+              onNext={goNext}
+            />
           ) : (
-            <span aria-hidden="true" className="h-8 w-8" />
+            <ReadyPanel onFinish={onDismiss} />
           )}
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-            <Sparkles size={14} aria-hidden="true" />
-            <span>Welcome to Draftside</span>
-          </div>
-          <button
-            type="button"
-            className="rounded-md border-0 bg-transparent px-2.5 py-1.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            onClick={onDismiss}
-            aria-label="Skip onboarding and continue to editor"
-          >
-            Skip
-          </button>
-        </header>
-
-        <Stepper currentStepId={stepId} />
-
-        {stepId === "welcome" ? (
-          <WelcomePanel onNext={goNext} />
-        ) : stepId === "ai" ? (
-          <AiPanel
-            stage={aiStage}
-            aiProgress={aiProgress}
-            modelInfo={modelInfo}
-            refreshing={refreshing}
-            downloadStarting={downloadStarting}
-            onStartDownload={handleStartDownload}
-            onRefresh={handleRefresh}
-            onNext={goNext}
-          />
-        ) : stepId === "install" ? (
-          <InstallPanel
-            platform={platform}
-            pwaInstalled={pwaInstalled}
-            pwaInstallAvailable={pwaInstallAvailable}
-            installing={installing}
-            onInstall={handleInstall}
-            onNext={goNext}
-          />
-        ) : (
-          <ReadyPanel onFinish={onDismiss} />
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-function Stepper({ currentStepId }: { currentStepId: StepId }) {
-  const currentIndex = STEPS.findIndex((step) => step.id === currentStepId);
+function ProgressBar({ currentIndex, total }: { currentIndex: number; total: number }) {
   return (
-    <ol className="m-0 flex items-center gap-1.5 p-0" aria-label="Onboarding progress">
-      {STEPS.map((step, index) => {
-        const isComplete = index < currentIndex;
-        const isCurrent = index === currentIndex;
-        return (
-          <Fragment key={step.id}>
-            <li
-              className="inline-flex shrink-0 items-center gap-2"
-              aria-current={isCurrent ? "step" : undefined}
-            >
-              <span
-                className={cn(
-                  "inline-flex size-6 items-center justify-center rounded-full text-[0.6875rem] font-semibold leading-none transition-colors",
-                  isComplete && "bg-primary text-primary-foreground",
-                  isCurrent && "bg-primary text-primary-foreground shadow-[inset_0_0_0_2px_hsl(var(--background))]",
-                  !isComplete && !isCurrent && "bg-muted text-muted-foreground",
-                )}
-                aria-hidden="true"
-              >
-                {isComplete ? <Check size={12} /> : index + 1}
-              </span>
-              <span
-                className={cn(
-                  "text-xs font-medium leading-4 max-[540px]:hidden",
-                  isCurrent ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {step.label}
-              </span>
-              <span className="sr-only max-[540px]:not-sr-only max-[540px]:hidden">{step.label}</span>
-            </li>
-            {index < STEPS.length - 1 ? (
-              <li
-                aria-hidden="true"
-                className={cn(
-                  "h-px flex-1 min-w-4 transition-colors",
-                  index < currentIndex ? "bg-primary" : "bg-border",
-                )}
-              />
-            ) : null}
-          </Fragment>
-        );
-      })}
-    </ol>
+    <div className="flex h-1 w-full bg-muted/60" aria-hidden="true">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "h-full flex-1 transition-colors duration-300",
+            i <= currentIndex ? "bg-foreground" : "bg-transparent",
+            i > 0 ? "border-l border-popover" : "",
+          )}
+        />
+      ))}
+    </div>
   );
 }
 
 function WelcomePanel({ onNext }: { onNext: () => void }) {
   return (
-    <div className="grid gap-4">
-      <div className={cn(iconClass, "bg-primary/15 text-primary")} aria-hidden="true">
-        <Sparkles size={22} />
+    <div className="grid gap-5">
+      <div className="grid gap-3">
+        <h2 id="onboarding-title" className={headlineClass}>
+          A private writing editor that runs on your device.
+        </h2>
+        <p className={copyClass}>
+          Draftside is open-source, AI-assisted, and 100% local. Drafts and AI suggestions never leave this browser.
+        </p>
       </div>
-      <h2 id="onboarding-title" className={headingClass}>
-        A private writing editor that runs on your device.
-      </h2>
-      <p className={copyClass}>
-        Draftside is an open-source writing editor powered by Chrome's built-in Gemini Nano. AI assistance, drafts, and
-        offline access all live on this device — nothing leaves your browser.
-      </p>
-      <ul className="m-0 grid gap-2.5 p-0">
-        <FeatureRow
-          icon={<Cloud size={16} />}
-          title="Local AI"
-          body="Inline completions, rewrites, and chat — all on-device."
-        />
-        <FeatureRow
-          icon={<Lock size={16} />}
-          title="Private vault"
-          body="Optional passkey-encrypted drafts that never sync anywhere."
-        />
-        <FeatureRow
-          icon={<WifiOff size={16} />}
-          title="Offline-ready"
-          body="Install once and keep writing without a connection."
-        />
-        <FeatureRow
-          icon={<FileText size={16} />}
-          title="Yours to export"
-          body="Download as HTML or Markdown anytime."
-        />
+      <ul className="m-0 grid gap-3.5 border-t border-border/70 p-0 pt-5">
+        <FeatureRow icon={<Cloud size={15} />} title="Local AI" body="Inline completions, rewrites, and chat — on-device." />
+        <FeatureRow icon={<Lock size={15} />} title="Private vault" body="Optional passkey-encrypted drafts." />
+        <FeatureRow icon={<WifiOff size={15} />} title="Offline-ready" body="Install once and keep writing offline." />
+        <FeatureRow icon={<FileText size={15} />} title="Yours to export" body="Download as HTML or Markdown anytime." />
       </ul>
       <div className={actionsClass}>
-        <Button type="button" className="max-[540px]:w-full" onClick={onNext}>
+        <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
           Get started
         </Button>
       </div>
@@ -371,13 +319,13 @@ function WelcomePanel({ onNext }: { onNext: () => void }) {
 
 function FeatureRow({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <li className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-2.5 text-[0.8125rem] leading-snug text-muted-foreground">
-      <span className="mt-0.5 inline-flex size-7 items-center justify-center rounded-md bg-muted text-foreground" aria-hidden="true">
+    <li className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-3 text-[0.9375rem] leading-6">
+      <span className="translate-y-[0.1875rem] text-muted-foreground" aria-hidden="true">
         {icon}
       </span>
       <span className="grid gap-0.5">
         <strong className="font-semibold text-foreground">{title}</strong>
-        <span>{body}</span>
+        <span className="text-muted-foreground">{body}</span>
       </span>
     </li>
   );
@@ -397,216 +345,207 @@ interface AiPanelProps {
 function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownload, onRefresh, onNext }: AiPanelProps) {
   if (stage === "checking") {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-muted text-foreground")} aria-hidden="true">
-          <Loader2 className="animate-spin" size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Checking your browser…</h2>
-        <p className={copyClass}>Looking for Chrome's built-in AI. This takes a second.</p>
-        <div className={actionsClass}>
-          <Button type="button" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
+      <PanelLayout
+        title="Checking your browser"
+        body="Looking for Chrome's built-in AI. This takes a second."
+        accent={<Loader2 className="animate-spin text-muted-foreground" size={18} />}
+        primary={
+          <Button type="button" size="lg" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
             Continue
           </Button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
   if (stage === "chrome-setup") {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-primary/15 text-primary")} aria-hidden="true">
-          <Sparkles size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Almost there — Chrome needs to expose the AI API</h2>
-        <p className={copyClass}>
-          You're on a Chromium-based browser, but the on-device <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.78rem] text-foreground">LanguageModel</code> API isn't visible here yet. Updating Chrome and enabling one flag usually fixes it.
-        </p>
-        <ol className="m-0 grid gap-2 pl-4 text-[0.8125rem] leading-6 text-muted-foreground [&_code]:break-all [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.78rem] [&_code]:text-foreground [&_strong]:font-semibold [&_strong]:text-foreground">
-          <li>Open <code>chrome://settings/help</code> and update to the latest Chrome (138+ recommended). Relaunch when prompted.</li>
-          <li>Open <code>chrome://flags/#prompt-api-for-gemini-nano</code> and set it to <strong>Enabled</strong>.</li>
-          <li>Click <strong>Relaunch</strong> at the bottom of the flags page.</li>
-          <li>Come back to this tab and click <em>Re-check</em>.</li>
-        </ol>
-        <div className={actionsClass}>
-          <Button type="button" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
-            Continue without AI
-          </Button>
-          <Button type="button" className="max-[540px]:w-full" onClick={onRefresh} disabled={refreshing}>
+      <PanelLayout
+        title="Chrome needs to expose the AI API"
+        body={
+          <>
+            You're on a Chromium-based browser, but the on-device <Code>LanguageModel</Code> API isn't visible here yet. Updating Chrome and enabling one flag usually fixes it.
+          </>
+        }
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onRefresh} disabled={refreshing}>
             {refreshing ? <Loader2 className="animate-spin" size={14} /> : null}
             {refreshing ? "Checking" : "Re-check"}
           </Button>
-        </div>
-      </div>
+        }
+        secondary={
+          <Button type="button" size="lg" variant="ghost" className="max-[540px]:w-full" onClick={onNext}>
+            Continue without AI
+          </Button>
+        }
+      >
+        <NumberedList
+          items={[
+            <>Open <Code>chrome://settings/help</Code> and update to Chrome 138+. Relaunch when prompted.</>,
+            <>Open <Code>chrome://flags/#prompt-api-for-gemini-nano</Code> and set to <Strong>Enabled</Strong>.</>,
+            <>Click <Strong>Relaunch</Strong> at the bottom of the flags page.</>,
+            <>Come back to this tab and click <em>Re-check</em>.</>,
+          ]}
+        />
+      </PanelLayout>
     );
   }
 
   if (stage === "non-chrome") {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-muted text-foreground")} aria-hidden="true">
-          <Globe size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>You can write here. AI features need Chrome.</h2>
-        <p className={copyClass}>
-          Draftside runs AI locally via Chrome's built-in Gemini Nano. The editor, drafts, and offline cache still work in your current browser — the AI features are the part that needs Chrome.
-        </p>
-        <div className="mt-1 rounded-lg bg-muted/60 px-3.5 py-3 text-[0.8125rem] leading-6 text-foreground">
-          <strong className="mb-1 block font-semibold">What still works here:</strong>
-          <ul className="m-0 pl-4 text-muted-foreground [&_li+li]:mt-0.5">
-            <li>Writing, formatting, and saving drafts</li>
-            <li>Private Vault with passkey encryption</li>
-            <li>Offline access once the app loads</li>
-          </ul>
-        </div>
-        <div className={actionsClass}>
+      <PanelLayout
+        title="You can write here. AI features need Chrome."
+        body="Draftside runs AI locally via Chrome's built-in Gemini Nano. The editor, drafts, and offline cache still work in your current browser — the AI is what needs Chrome."
+        primary={
           <a
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-secondary px-4 text-sm font-semibold leading-5 text-secondary-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background max-[540px]:w-full"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-[0.9375rem] font-semibold leading-5 text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background max-[540px]:w-full"
             href="https://www.google.com/chrome/"
             target="_blank"
             rel="noopener noreferrer"
           >
+            <Globe size={15} />
             Get Chrome
           </a>
-          <Button type="button" className="max-[540px]:w-full" onClick={onNext}>
+        }
+        secondary={
+          <Button type="button" size="lg" variant="ghost" className="max-[540px]:w-full" onClick={onNext}>
             Continue
           </Button>
-        </div>
-      </div>
+        }
+      >
+        <InfoCard title="What still works here">
+          <ul className="m-0 grid gap-1 pl-4 text-muted-foreground">
+            <li>Writing, formatting, and saving drafts</li>
+            <li>Private Vault with passkey encryption</li>
+            <li>Offline access once the app loads</li>
+          </ul>
+        </InfoCard>
+      </PanelLayout>
     );
   }
 
   if (stage === "unavailable") {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-destructive/10 text-destructive")} aria-hidden="true">
-          <AlertTriangle size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Gemini Nano isn't ready in this Chrome profile yet</h2>
-        <p className={copyClass}>
-          Chrome exposes the LanguageModel API here, but the on-device model isn't available. This is usually fixed by enabling two flags and restarting Chrome.
-        </p>
-        <ol className="m-0 grid gap-2 pl-4 text-[0.8125rem] leading-6 text-muted-foreground [&_code]:break-all [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.78rem] [&_code]:text-foreground [&_strong]:font-semibold [&_strong]:text-foreground">
-          <li>Open <code>chrome://flags/#optimization-guide-on-device-model</code> and set it to <strong>Enabled BypassPerfRequirement</strong>.</li>
-          <li>Open <code>chrome://flags/#prompt-api-for-gemini-nano</code> and set it to <strong>Enabled</strong>.</li>
-          <li>Click <strong>Relaunch</strong> at the bottom of the flags page.</li>
-          <li>Come back to this tab and click <em>Re-check</em>.</li>
-        </ol>
-        <div className={actionsClass}>
-          <Button type="button" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
-            Continue without AI
-          </Button>
-          <Button type="button" className="max-[540px]:w-full" onClick={onRefresh} disabled={refreshing}>
+      <PanelLayout
+        title="Gemini Nano isn't ready in this Chrome profile yet"
+        body="Chrome exposes the LanguageModel API here, but the on-device model isn't available. Enable two flags and restart Chrome."
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onRefresh} disabled={refreshing}>
             {refreshing ? <Loader2 className="animate-spin" size={14} /> : null}
             {refreshing ? "Checking" : "Re-check"}
           </Button>
-        </div>
-      </div>
+        }
+        secondary={
+          <Button type="button" size="lg" variant="ghost" className="max-[540px]:w-full" onClick={onNext}>
+            Continue without AI
+          </Button>
+        }
+      >
+        <NumberedList
+          items={[
+            <>Open <Code>chrome://flags/#optimization-guide-on-device-model</Code> and set to <Strong>Enabled BypassPerfRequirement</Strong>.</>,
+            <>Open <Code>chrome://flags/#prompt-api-for-gemini-nano</Code> and set to <Strong>Enabled</Strong>.</>,
+            <>Click <Strong>Relaunch</Strong> at the bottom of the flags page.</>,
+            <>Come back to this tab and click <em>Re-check</em>.</>,
+          ]}
+        />
+      </PanelLayout>
     );
   }
 
   if (stage === "downloadable") {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-primary/15 text-primary")} aria-hidden="true">
-          <ArrowDownToLine size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Ready to download Gemini Nano</h2>
-        <p className={copyClass}>
-          Chrome will download the on-device model (~1–2 GB) once. After that, every AI feature in Draftside runs locally with no network round-trip.
-        </p>
-        <div className="mt-1 rounded-lg bg-muted/60 px-3.5 py-3 text-[0.8125rem] leading-6 text-foreground">
-          <strong className="mb-1 block font-semibold">What happens next:</strong>
-          <ul className="m-0 pl-4 text-muted-foreground [&_li+li]:mt-0.5">
+      <PanelLayout
+        title="Download the local model"
+        body="Chrome downloads Gemini Nano (~1–2 GB) once. After that, every AI feature in Draftside runs locally — no network round-trips."
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onStartDownload} disabled={downloadStarting}>
+            {downloadStarting ? <Loader2 className="animate-spin" size={14} /> : <ArrowDownToLine size={15} />}
+            {downloadStarting ? "Starting" : "Start download"}
+          </Button>
+        }
+        secondary={
+          <Button type="button" size="lg" variant="ghost" className="max-[540px]:w-full" onClick={onNext}>
+            Not now
+          </Button>
+        }
+      >
+        <InfoCard title="What happens next">
+          <ul className="m-0 grid gap-1 pl-4 text-muted-foreground">
             <li>Chrome downloads the model in the background</li>
             <li>You can keep moving through onboarding while it finishes</li>
             <li>The model status pill in the editor shows live progress</li>
           </ul>
-        </div>
-        <div className={actionsClass}>
-          <Button type="button" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
-            Not now
-          </Button>
-          <Button type="button" className="max-[540px]:w-full" onClick={onStartDownload} disabled={downloadStarting}>
-            {downloadStarting ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
-            {downloadStarting ? "Starting…" : "Start download"}
-          </Button>
-        </div>
-      </div>
+        </InfoCard>
+      </PanelLayout>
     );
   }
 
   if (stage === "downloading") {
     const percent = aiProgress === null ? null : Math.max(0, Math.min(1, aiProgress));
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-primary/15 text-primary")} aria-hidden="true">
-          <Loader2 className="animate-spin" size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Downloading the local model…</h2>
-        <p className={copyClass}>
-          Chrome is downloading Gemini Nano in the background. You can continue through onboarding — the download keeps running.
-        </p>
-        <div
-          className="relative mt-1 h-2 overflow-hidden rounded-full bg-muted"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent === null ? undefined : Math.round(percent * 100)}
-        >
-          <div
-            className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out"
-            style={{ width: percent === null ? "12%" : `${Math.round(percent * 100)}%` }}
-          />
-        </div>
-        <div className="text-[0.8125rem] font-medium text-muted-foreground">
-          {percent === null ? "Preparing…" : `${formatPercent(percent)} downloaded`}
-        </div>
-        <div className={actionsClass}>
-          <Button type="button" className="max-[540px]:w-full" onClick={onNext}>
+      <PanelLayout
+        title="Downloading the local model"
+        body="Chrome is downloading Gemini Nano in the background. Continue through onboarding — the download keeps running."
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
             Continue while it finishes
           </Button>
+        }
+      >
+        <div className="grid gap-2">
+          <div
+            className="relative h-1.5 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent === null ? undefined : Math.round(percent * 100)}
+          >
+            <div
+              className="h-full rounded-full bg-foreground transition-[width] duration-200 ease-out"
+              style={{ width: percent === null ? "12%" : `${Math.round(percent * 100)}%` }}
+            />
+          </div>
+          <div className="text-[0.8125rem] font-medium text-muted-foreground">
+            {percent === null ? "Preparing" : `${formatPercent(percent)} downloaded`}
+          </div>
         </div>
-      </div>
+      </PanelLayout>
     );
   }
 
   if (stage === "ready") {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-green-500/15 text-green-700 dark:text-green-300")} aria-hidden="true">
-          <CheckCircle2 size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Local AI is ready</h2>
-        <p className={copyClass}>
-          Gemini Nano is loaded in your browser. Every AI suggestion from here runs on this device.
-        </p>
-        <div className={actionsClass}>
-          <Button type="button" className="max-[540px]:w-full" onClick={onNext}>
+      <PanelLayout
+        accent={<CheckCircle2 className="text-foreground" size={20} />}
+        title="Local AI is ready"
+        body="Gemini Nano is loaded in your browser. Every AI suggestion from here runs on this device."
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
             Continue
           </Button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
   return (
-    <div className="grid gap-3">
-      <div className={cn(iconClass, "bg-destructive/10 text-destructive")} aria-hidden="true">
-        <AlertTriangle size={20} />
-      </div>
-      <h2 id="onboarding-title" className={headingClass}>Couldn't reach the local model</h2>
-      <p className={copyClass}>Chrome reported an error while checking on-device AI. You can keep writing — AI tools will retry on first use.</p>
-      <div className={actionsClass}>
-        <Button type="button" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
-          Continue
-        </Button>
-        <Button type="button" className="max-[540px]:w-full" onClick={onRefresh} disabled={refreshing}>
+    <PanelLayout
+      accent={<AlertTriangle className="text-foreground" size={18} />}
+      title="Couldn't reach the local model"
+      body="Chrome reported an error while checking on-device AI. You can keep writing — AI tools will retry on first use."
+      primary={
+        <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onRefresh} disabled={refreshing}>
           {refreshing ? <Loader2 className="animate-spin" size={14} /> : null}
           {refreshing ? "Retrying" : "Retry"}
         </Button>
-      </div>
-    </div>
+      }
+      secondary={
+        <Button type="button" size="lg" variant="ghost" className="max-[540px]:w-full" onClick={onNext}>
+          Continue
+        </Button>
+      }
+    />
   );
 }
 
@@ -622,83 +561,136 @@ interface InstallPanelProps {
 function InstallPanel({ platform, pwaInstalled, pwaInstallAvailable, installing, onInstall, onNext }: InstallPanelProps) {
   if (pwaInstalled) {
     return (
-      <div className="grid gap-3">
-        <div className={cn(iconClass, "bg-green-500/15 text-green-700 dark:text-green-300")} aria-hidden="true">
-          <CheckCircle2 size={20} />
-        </div>
-        <h2 id="onboarding-title" className={headingClass}>Draftside is installed</h2>
-        <p className={copyClass}>
-          The app is already installed on this device. Launch it from your home screen, Dock, or app launcher for the fastest start.
-        </p>
-        <div className={actionsClass}>
-          <Button type="button" className="max-[540px]:w-full" onClick={onNext}>
+      <PanelLayout
+        accent={<CheckCircle2 className="text-foreground" size={20} />}
+        title="Draftside is installed"
+        body="The app is already installed on this device. Launch it from your home screen, Dock, or app launcher for the fastest start."
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
             Continue
           </Button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
   const { title, steps } = INSTALL_INSTRUCTIONS[platform];
 
   return (
-    <div className="grid gap-3">
-      <div className={cn(iconClass, "bg-primary/15 text-primary")} aria-hidden="true">
-        <Download size={20} />
-      </div>
-      <h2 id="onboarding-title" className={headingClass}>Install Draftside as an app</h2>
-      <p className={copyClass}>
-        Install once and keep writing offline, with a dedicated window and faster launch. Optional — Draftside works in any tab.
-      </p>
+    <PanelLayout
+      title="Install Draftside as an app"
+      body="Install once and keep writing offline, with a dedicated window and faster launch. Optional — Draftside works in any tab."
+      primary={
+        pwaInstallAvailable ? (
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onInstall} disabled={installing}>
+            {installing ? <Loader2 className="animate-spin" size={14} /> : <Download size={15} />}
+            {installing ? "Installing" : "Install Draftside"}
+          </Button>
+        ) : (
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
+            I'll install it
+          </Button>
+        )
+      }
+      secondary={
+        <Button type="button" size="lg" variant="ghost" className="max-[540px]:w-full" onClick={onNext}>
+          Skip
+        </Button>
+      }
+    >
       {pwaInstallAvailable ? (
-        <div className="mt-1 rounded-lg bg-muted/60 px-3.5 py-3 text-[0.8125rem] leading-6 text-foreground">
-          <strong className="mb-1 block font-semibold">One-click install</strong>
+        <InfoCard title="One-click install">
           <span className="text-muted-foreground">Your browser is ready to install Draftside as an app.</span>
-        </div>
+        </InfoCard>
       ) : (
-        <div className="mt-1 grid gap-2 rounded-lg bg-muted/60 px-3.5 py-3 text-[0.8125rem] leading-6 text-foreground">
-          <strong className="font-semibold">{title}</strong>
+        <InfoCard title={title}>
           <ol className="m-0 grid list-decimal gap-1 pl-4 text-muted-foreground">
             {steps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
-        </div>
+        </InfoCard>
       )}
-      <div className={actionsClass}>
-        <Button type="button" variant="secondary" className="max-[540px]:w-full" onClick={onNext}>
-          Skip
-        </Button>
-        {pwaInstallAvailable ? (
-          <Button type="button" className="max-[540px]:w-full" onClick={onInstall} disabled={installing}>
-            {installing ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
-            {installing ? "Installing…" : "Install Draftside"}
-          </Button>
-        ) : (
-          <Button type="button" className="max-[540px]:w-full" onClick={onNext}>
-            I'll install it
-          </Button>
-        )}
-      </div>
-    </div>
+    </PanelLayout>
   );
 }
 
 function ReadyPanel({ onFinish }: { onFinish: () => void }) {
   return (
-    <div className="grid gap-3">
-      <div className={cn(iconClass, "bg-green-500/15 text-green-700 dark:text-green-300")} aria-hidden="true">
-        <CheckCircle2 size={20} />
-      </div>
-      <h2 id="onboarding-title" className={headingClass}>You're all set</h2>
-      <p className={copyClass}>
-        Open a draft from the rail, or start typing. Everything stays on this device.
-      </p>
-      <div className={actionsClass}>
-        <Button type="button" className="max-[540px]:w-full" onClick={onFinish}>
+    <PanelLayout
+      accent={<CheckCircle2 className="text-foreground" size={20} />}
+      title="You're all set"
+      body="Open a draft from the rail, or just start typing. Everything stays on this device."
+      primary={
+        <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onFinish}>
           Start writing
         </Button>
+      }
+    />
+  );
+}
+
+function PanelLayout({
+  accent,
+  title,
+  body,
+  children,
+  primary,
+  secondary,
+}: {
+  accent?: React.ReactNode;
+  title: React.ReactNode;
+  body: React.ReactNode;
+  children?: React.ReactNode;
+  primary: React.ReactNode;
+  secondary?: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-5">
+      <div className="grid gap-3">
+        {accent ? <div className="inline-flex" aria-hidden="true">{accent}</div> : null}
+        <h2 id="onboarding-title" className={headlineClass}>
+          {title}
+        </h2>
+        <p className={copyClass}>{body}</p>
+      </div>
+      {children}
+      <div className={actionsClass}>
+        {secondary}
+        {primary}
       </div>
     </div>
   );
+}
+
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5 text-[0.875rem] leading-6 text-foreground">
+      <strong className="font-semibold">{title}</strong>
+      {children}
+    </div>
+  );
+}
+
+function NumberedList({ items }: { items: React.ReactNode[] }) {
+  return (
+    <ol className="m-0 grid gap-2.5 p-0 text-[0.875rem] leading-6 text-muted-foreground">
+      {items.map((item, i) => (
+        <li key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-3">
+          <span className="inline-flex size-5 items-center justify-center rounded-full bg-muted text-[0.6875rem] font-semibold leading-none text-foreground" aria-hidden="true">
+            {i + 1}
+          </span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Code({ children }: { children: React.ReactNode }) {
+  return <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground">{children}</code>;
+}
+
+function Strong({ children }: { children: React.ReactNode }) {
+  return <strong className="font-semibold text-foreground">{children}</strong>;
 }
