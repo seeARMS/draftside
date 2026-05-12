@@ -37,12 +37,6 @@ export const statusPill = (state: "default" | "ok" | "danger" = "default", class
 export const popoverShell =
   "pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-0 z-50 grid w-[min(22rem,calc(100vw-1.5rem))] translate-y-1 gap-3 rounded-xl bg-popover p-3.5 text-popover-foreground opacity-0 shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)] transition duration-100 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 after:absolute after:bottom-[-0.4rem] after:left-4 after:size-3 after:rotate-45 after:border-b after:border-r after:border-border after:bg-popover max-[520px]:fixed max-[520px]:inset-x-3 max-[520px]:bottom-20 max-[520px]:left-auto max-[520px]:w-auto max-[520px]:max-w-[24rem] max-[520px]:max-h-[70svh] max-[520px]:overflow-y-auto max-[520px]:mx-auto max-[520px]:after:hidden";
 
-export const popoverTitle =
-  "flex items-start justify-between gap-3 text-sm font-semibold leading-tight text-foreground [&>span:last-child]:min-h-6 [&>span:last-child]:rounded-md [&>span:last-child]:bg-muted/70 [&>span:last-child]:px-2 [&>span:last-child]:py-1 [&>span:last-child]:text-xs [&>span:last-child]:font-medium [&>span:last-child]:leading-4 [&>span:last-child]:text-muted-foreground";
-
-export const popoverGrid =
-  "grid grid-cols-2 gap-x-3 gap-y-2 [&>span]:grid [&>span]:min-w-0 [&>span]:gap-0.5 [&_strong]:text-[0.6875rem] [&_strong]:font-medium [&_strong]:leading-4 [&_strong]:text-muted-foreground [&_em]:overflow-hidden [&_em]:text-ellipsis [&_em]:whitespace-nowrap [&_em]:not-italic [&_em]:text-[0.8125rem] [&_em]:leading-5 [&_em]:text-foreground";
-
 export const overlay =
   "fixed inset-0 z-[80] grid place-items-center bg-background/50 p-4 backdrop-blur-md";
 

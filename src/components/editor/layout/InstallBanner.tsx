@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../ui/button";
 import { detectInstallPlatform, INSTALL_INSTRUCTIONS } from "../installInstructions";
+import { eyebrowClass } from "../dialogPrimitives";
 
 interface InstallBannerProps {
   pwaInstalled: boolean;
@@ -31,14 +32,20 @@ export function InstallBanner({ pwaInstalled, installPromptAvailable, installSta
   const { title, steps } = INSTALL_INSTRUCTIONS[platform];
 
   return (
-    <div ref={containerRef} className={cn("mx-3 mt-2 grid shrink-0 gap-2.5 rounded-md bg-muted/60 p-3 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.75)] max-[520px]:mx-2.5", offlineReady && "bg-muted/70")}>
-      <div className="grid min-w-0 gap-1">
-        <span className="inline-flex w-max max-w-full items-center gap-1.5 font-mono text-[0.6875rem] font-semibold uppercase leading-4 text-muted-foreground">
-          <Download size={13} />
+    <div
+      ref={containerRef}
+      className={cn(
+        "mx-3 mt-2 grid shrink-0 gap-3 rounded-xl bg-muted/50 p-3.5 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.6)] max-[520px]:mx-2.5",
+        offlineReady && "bg-muted/60",
+      )}
+    >
+      <div className="grid min-w-0 gap-1.5">
+        <span className={cn(eyebrowClass, "inline-flex w-max max-w-full items-center gap-1.5")}>
+          <Download size={12} />
           {installStatusLabel}
         </span>
-        <strong className="text-sm font-semibold leading-5 text-foreground">Install Draftside</strong>
-        <span className="text-xs leading-tight text-muted-foreground">Install once and keep writing offline.</span>
+        <strong className="text-[0.9375rem] font-semibold leading-5 text-foreground">Install Draftside</strong>
+        <span className="text-[0.8125rem] leading-5 text-muted-foreground">Install once and keep writing offline.</span>
       </div>
       {installPromptAvailable ? (
         <Button type="button" size="sm" onClick={onInstall}>
@@ -57,8 +64,11 @@ export function InstallBanner({ pwaInstalled, installPromptAvailable, installSta
         </Button>
       )}
       {expanded && !installPromptAvailable ? (
-        <div id="install-instructions" className="grid gap-1.5 rounded bg-background/70 p-2.5 text-xs leading-5 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.6)]">
-          <strong className="text-[0.75rem] font-semibold leading-4 text-foreground">{title}</strong>
+        <div
+          id="install-instructions"
+          className="grid gap-2 rounded-lg bg-background/70 p-3 text-[0.8125rem] leading-6 text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.5)]"
+        >
+          <strong className="text-[0.875rem] font-semibold leading-5 text-foreground">{title}</strong>
           <ol className="m-0 grid list-decimal gap-1 pl-4 text-muted-foreground">
             {steps.map((step) => (
               <li key={step}>{step}</li>

@@ -2,7 +2,13 @@ import { Check, Wifi, WifiOff } from "lucide-react";
 import type { OfflineRuntimeInfo } from "../../../lib/types";
 import { formatBytes, formatModelInfoTime, formatNumber, formatPercent } from "../../../lib/formatters";
 import { cn } from "../../../lib/utils";
-import { popoverGrid, popoverShell, popoverTitle, statusPill } from "../tailwind";
+import { popoverShell, statusPill } from "../tailwind";
+import {
+  KeyValueGrid,
+  KeyValueRow,
+  popoverHeadlineClass,
+  popoverMetaClass,
+} from "../dialogPrimitives";
 
 interface OfflineStatusPopoverProps {
   online: boolean;
@@ -25,53 +31,62 @@ export function OfflineStatusPopover({
   installStatusLabel,
   onRefresh,
 }: OfflineStatusPopoverProps) {
+  const cacheStatus = offlineInfo.serviceWorkerSupported
+    ? offlineInfo.controlled
+      ? "Ready"
+      : offlineInfo.registrationState === "activated"
+        ? "Preparing"
+        : offlineInfo.registrationState
+    : "Unsupported";
+
+  const headerStatus = offlineInfo.loading ? "checking" : offlineInfo.controlled ? "ready" : "standby";
+
   return (
     <span className="group relative inline-flex" onMouseEnter={onRefresh} onFocus={onRefresh}>
-      <span className={statusPill(offlineReady || online ? "ok" : "default")} tabIndex={0} aria-describedby="offline-status-popover">
+      <span
+        className={statusPill(offlineReady || online ? "ok" : "default")}
+        tabIndex={0}
+        aria-describedby="offline-status-popover"
+      >
         {offlineReady ? <Check size={14} /> : online ? <Wifi size={14} /> : <WifiOff size={14} />}
         {offlineBadgeLabel}
       </span>
-      <span id="offline-status-popover" className={cn(popoverShell, "w-[min(24rem,calc(100vw-1.5rem))]")} role="tooltip">
-        <span className={popoverTitle}>
-          <span>Works offline</span>
-          <span>{offlineInfo.loading ? "checking" : offlineInfo.controlled ? "ready" : "standby"}</span>
-        </span>
+      <span
+        id="offline-status-popover"
+        className={cn(popoverShell, "w-[min(24rem,calc(100vw-1.5rem))]")}
+        role="tooltip"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h3 className={popoverHeadlineClass}>Works offline</h3>
+          <span className="inline-flex items-center rounded-md bg-muted/70 px-2 py-0.5 text-[0.6875rem] font-medium leading-4 text-muted-foreground">
+            {headerStatus}
+          </span>
+        </div>
 
-        <span className={popoverGrid}>
-          <span>
-            <strong>Network</strong>
-            <em>{online ? "online now" : "offline now"}</em>
-          </span>
-          <span>
-            <strong>Offline cache</strong>
-            <em>{offlineInfo.serviceWorkerSupported ? (offlineInfo.controlled ? "Ready" : offlineInfo.registrationState === "activated" ? "Preparing" : offlineInfo.registrationState) : "Unsupported"}</em>
-          </span>
-          <span>
-            <strong>Cached</strong>
-            <em>
-              {formatNumber(offlineInfo.cachedRequests)} files · {formatBytes(offlineInfo.cachedBytes)}
-            </em>
-          </span>
-          <span>
-            <strong>Disk used by Draftside</strong>
-            <em>
-              {formatBytes(offlineInfo.storageUsage)} / {formatBytes(offlineInfo.storageQuota)} ({formatPercent(offlineStorageRatio)})
-            </em>
-          </span>
-          <span>
-            <strong>Draft storage</strong>
-            <em>{storagePersisted === null ? "checking" : storagePersisted ? "Protected" : "May be cleared if disk fills"}</em>
-          </span>
-          <span>
-            <strong>Install</strong>
-            <em>{installStatusLabel}</em>
-          </span>
-        </span>
+        <KeyValueGrid>
+          <KeyValueRow label="Network" value={online ? "online now" : "offline now"} />
+          <KeyValueRow label="Offline cache" value={cacheStatus} />
+          <KeyValueRow
+            label="Cached"
+            value={`${formatNumber(offlineInfo.cachedRequests)} files · ${formatBytes(offlineInfo.cachedBytes)}`}
+          />
+          <KeyValueRow
+            label="Disk used"
+            value={`${formatBytes(offlineInfo.storageUsage)} / ${formatBytes(offlineInfo.storageQuota)} (${formatPercent(offlineStorageRatio)})`}
+          />
+          <KeyValueRow
+            label="Draft storage"
+            value={storagePersisted === null ? "checking" : storagePersisted ? "Protected" : "May be cleared"}
+          />
+          <KeyValueRow label="Install" value={installStatusLabel} />
+        </KeyValueGrid>
 
-        <span className="text-xs leading-snug text-muted-foreground">
+        <p className={popoverMetaClass}>
           Once Draftside loads, you can keep writing without internet. Install it to get a desktop launcher. Your drafts and the AI model live on your device.
-        </span>
-        <span className="font-mono text-xs leading-snug text-muted-foreground">checked {formatModelInfoTime(offlineInfo.checkedAt)}</span>
+        </p>
+        <p className="m-0 font-mono text-xs leading-5 text-muted-foreground">
+          checked {formatModelInfoTime(offlineInfo.checkedAt)}
+        </p>
       </span>
     </span>
   );

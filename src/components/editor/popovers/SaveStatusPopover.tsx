@@ -1,7 +1,13 @@
 import { Save } from "lucide-react";
 import type { SaveState, WriteSession } from "../../../lib/types";
 import { formatSaveTime } from "../../../lib/formatters";
-import { popoverGrid, popoverShell, popoverTitle, statusPill } from "../tailwind";
+import { popoverShell, statusPill } from "../tailwind";
+import {
+  KeyValueGrid,
+  KeyValueRow,
+  popoverHeadlineClass,
+  popoverMetaClass,
+} from "../dialogPrimitives";
 
 interface SaveStatusPopoverProps {
   saveState: SaveState;
@@ -29,39 +35,27 @@ export function SaveStatusPopover({
         {saveState}
       </span>
       <span id="save-status-popover" className={popoverShell} role="tooltip">
-        <span className={popoverTitle}>
-          <span>Saved on this device</span>
-          <span>{saveState}</span>
-        </span>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className={popoverHeadlineClass}>Saved on this device</h3>
+          <span className="inline-flex items-center rounded-md bg-muted/70 px-2 py-0.5 text-[0.6875rem] font-medium leading-4 text-muted-foreground">
+            {saveState}
+          </span>
+        </div>
 
-        <span className={popoverGrid}>
-          <span>
-            <strong>Last saved</strong>
-            <em>{formatSaveTime(lastSavedAt)}</em>
-          </span>
-          <span>
-            <strong>Created</strong>
-            <em>{formatSaveTime(activeSession?.createdAt)}</em>
-          </span>
-          <span>
-            <strong>Current draft</strong>
-            <em>
-              {wordCount} words, {charCount} chars
-            </em>
-          </span>
-          <span>
-            <strong>Storage</strong>
-            <em>{storagePersisted === null ? "checking" : storagePersisted ? "Protected" : "May be cleared if disk fills"}</em>
-          </span>
-          <span>
-            <strong>Session</strong>
-            <em>{activeSession?.title || "Untitled"}</em>
-          </span>
-        </span>
+        <KeyValueGrid>
+          <KeyValueRow label="Last saved" value={formatSaveTime(lastSavedAt)} />
+          <KeyValueRow label="Created" value={formatSaveTime(activeSession?.createdAt)} />
+          <KeyValueRow label="Current draft" value={`${wordCount} words · ${charCount} chars`} />
+          <KeyValueRow
+            label="Storage"
+            value={storagePersisted === null ? "checking" : storagePersisted ? "Protected" : "May be cleared"}
+          />
+          <KeyValueRow label="Session" value={activeSession?.title || "Untitled"} />
+        </KeyValueGrid>
 
-        <span className="text-xs leading-snug text-muted-foreground">
+        <p className={popoverMetaClass}>
           Your draft saves automatically as you type — to this browser only. Chat and AI suggestions are kept with it.
-        </span>
+        </p>
       </span>
     </span>
   );

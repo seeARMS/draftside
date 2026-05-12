@@ -18,6 +18,17 @@ import { cn } from "../../../lib/utils";
 import { Button } from "../../ui/button";
 import { overlay } from "../tailwind";
 import { detectInstallPlatform, INSTALL_INSTRUCTIONS } from "../installInstructions";
+import {
+  Code,
+  dialogActionsClass,
+  dialogCopyClass,
+  dialogHeadlineClass,
+  eyebrowClass,
+  InfoCard,
+  NumberedList,
+  PanelLayout,
+  Strong,
+} from "../dialogPrimitives";
 
 interface OnboardingDialogProps {
   hasApi: boolean | null;
@@ -76,11 +87,6 @@ function resolveAiStage({
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), textarea:not([disabled])';
-
-const headlineClass = "m-0 text-balance text-[1.6rem] font-semibold leading-[1.15] tracking-[-0.01em] text-foreground max-[540px]:text-[1.375rem]";
-const eyebrowClass = "text-[0.7rem] font-medium uppercase tracking-[0.14em] text-muted-foreground";
-const copyClass = "m-0 text-[0.9375rem] leading-7 text-muted-foreground";
-const actionsClass = "mt-2 flex flex-wrap items-center justify-end gap-2 max-[540px]:flex-col-reverse max-[540px]:items-stretch";
 
 function useDialogFocus(stepId: StepId) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -295,10 +301,10 @@ function WelcomePanel({ onNext }: { onNext: () => void }) {
   return (
     <div className="grid gap-5">
       <div className="grid gap-3">
-        <h2 id="onboarding-title" className={headlineClass}>
+        <h2 id="onboarding-title" className={dialogHeadlineClass}>
           A private writing editor that runs on your device.
         </h2>
-        <p className={copyClass}>
+        <p className={dialogCopyClass}>
           Draftside is open-source, AI-assisted, and 100% local. Drafts and AI suggestions never leave this browser.
         </p>
       </div>
@@ -308,7 +314,7 @@ function WelcomePanel({ onNext }: { onNext: () => void }) {
         <FeatureRow icon={<WifiOff size={15} />} title="Offline-ready" body="Install once and keep writing offline." />
         <FeatureRow icon={<FileText size={15} />} title="Yours to export" body="Download as HTML or Markdown anytime." />
       </ul>
-      <div className={actionsClass}>
+      <div className={dialogActionsClass}>
         <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
           Get started
         </Button>
@@ -346,6 +352,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
   if (stage === "checking") {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         title="Checking your browser"
         body="Looking for Chrome's built-in AI. This takes a second."
         accent={<Loader2 className="animate-spin text-muted-foreground" size={18} />}
@@ -361,6 +368,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
   if (stage === "chrome-setup") {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         title="Chrome needs to expose the AI API"
         body={
           <>
@@ -394,6 +402,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
   if (stage === "non-chrome") {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         title="You can write here. AI features need Chrome."
         body="Draftside runs AI locally via Chrome's built-in Gemini Nano. The editor, drafts, and offline cache still work in your current browser — the AI is what needs Chrome."
         primary={
@@ -427,6 +436,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
   if (stage === "unavailable") {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         title="Gemini Nano isn't ready in this Chrome profile yet"
         body="Chrome exposes the LanguageModel API here, but the on-device model isn't available. Enable two flags and restart Chrome."
         primary={
@@ -456,6 +466,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
   if (stage === "downloadable") {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         title="Download the local model"
         body="Chrome downloads Gemini Nano (~1–2 GB) once. After that, every AI feature in Draftside runs locally — no network round-trips."
         primary={
@@ -485,6 +496,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
     const percent = aiProgress === null ? null : Math.max(0, Math.min(1, aiProgress));
     return (
       <PanelLayout
+        titleId="onboarding-title"
         title="Downloading the local model"
         body="Chrome is downloading Gemini Nano in the background. Continue through onboarding — the download keeps running."
         primary={
@@ -517,6 +529,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
   if (stage === "ready") {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         accent={<CheckCircle2 className="text-foreground" size={20} />}
         title="Local AI is ready"
         body="Gemini Nano is loaded in your browser. Every AI suggestion from here runs on this device."
@@ -531,6 +544,7 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
 
   return (
     <PanelLayout
+      titleId="onboarding-title"
       accent={<AlertTriangle className="text-foreground" size={18} />}
       title="Couldn't reach the local model"
       body="Chrome reported an error while checking on-device AI. You can keep writing — AI tools will retry on first use."
@@ -562,6 +576,7 @@ function InstallPanel({ platform, pwaInstalled, pwaInstallAvailable, installing,
   if (pwaInstalled) {
     return (
       <PanelLayout
+        titleId="onboarding-title"
         accent={<CheckCircle2 className="text-foreground" size={20} />}
         title="Draftside is installed"
         body="The app is already installed on this device. Launch it from your home screen, Dock, or app launcher for the fastest start."
@@ -578,6 +593,7 @@ function InstallPanel({ platform, pwaInstalled, pwaInstallAvailable, installing,
 
   return (
     <PanelLayout
+      titleId="onboarding-title"
       title="Install Draftside as an app"
       body="Install once and keep writing offline, with a dedicated window and faster launch. Optional — Draftside works in any tab."
       primary={
@@ -618,6 +634,7 @@ function InstallPanel({ platform, pwaInstalled, pwaInstallAvailable, installing,
 function ReadyPanel({ onFinish }: { onFinish: () => void }) {
   return (
     <PanelLayout
+      titleId="onboarding-title"
       accent={<CheckCircle2 className="text-foreground" size={20} />}
       title="You're all set"
       body="Open a draft from the rail, or just start typing. Everything stays on this device."
@@ -630,67 +647,3 @@ function ReadyPanel({ onFinish }: { onFinish: () => void }) {
   );
 }
 
-function PanelLayout({
-  accent,
-  title,
-  body,
-  children,
-  primary,
-  secondary,
-}: {
-  accent?: React.ReactNode;
-  title: React.ReactNode;
-  body: React.ReactNode;
-  children?: React.ReactNode;
-  primary: React.ReactNode;
-  secondary?: React.ReactNode;
-}) {
-  return (
-    <div className="grid gap-5">
-      <div className="grid gap-3">
-        {accent ? <div className="inline-flex" aria-hidden="true">{accent}</div> : null}
-        <h2 id="onboarding-title" className={headlineClass}>
-          {title}
-        </h2>
-        <p className={copyClass}>{body}</p>
-      </div>
-      {children}
-      <div className={actionsClass}>
-        {secondary}
-        {primary}
-      </div>
-    </div>
-  );
-}
-
-function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="grid gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5 text-[0.875rem] leading-6 text-foreground">
-      <strong className="font-semibold">{title}</strong>
-      {children}
-    </div>
-  );
-}
-
-function NumberedList({ items }: { items: React.ReactNode[] }) {
-  return (
-    <ol className="m-0 grid gap-2.5 p-0 text-[0.875rem] leading-6 text-muted-foreground">
-      {items.map((item, i) => (
-        <li key={i} className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-3">
-          <span className="inline-flex size-5 items-center justify-center rounded-full bg-muted text-[0.6875rem] font-semibold leading-none text-foreground" aria-hidden="true">
-            {i + 1}
-          </span>
-          <span>{item}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function Code({ children }: { children: React.ReactNode }) {
-  return <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground">{children}</code>;
-}
-
-function Strong({ children }: { children: React.ReactNode }) {
-  return <strong className="font-semibold text-foreground">{children}</strong>;
-}
