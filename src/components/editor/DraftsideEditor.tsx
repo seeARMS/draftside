@@ -878,6 +878,7 @@ export default function DraftsideEditor() {
         <OnboardingDialog
           hasApi={onboarding.hasApi}
           isChromeFamily={onboarding.isChromeFamily}
+          isMobile={onboarding.isMobile}
           aiStatus={aiStatus}
           modelInfo={modelInfo}
           aiProgress={aiProgress}

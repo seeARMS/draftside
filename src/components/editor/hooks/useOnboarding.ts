@@ -36,26 +36,47 @@ function writeRecord(record: OnboardedRecord) {
   }
 }
 
-function detectChromeFamily(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const uaData = (navigator as Navigator & { userAgentData?: { brands?: { brand: string }[] } }).userAgentData;
-  if (uaData?.brands?.length) {
-    return uaData.brands.some((brand) => /chromium|google chrome|microsoft edge|brave/i.test(brand.brand));
-  }
+interface BrowserDetection {
+  isChromeFamily: boolean;
+  isMobile: boolean;
+}
+
+function detectBrowser(): BrowserDetection {
+  if (typeof navigator === "undefined") return { isChromeFamily: false, isMobile: false };
+
   const ua = navigator.userAgent || "";
-  if (/Edg\/|Chrome\/|Chromium\//.test(ua) && !/Firefox|FxiOS/.test(ua)) return true;
-  return false;
+  const uaData = (
+    navigator as Navigator & {
+      userAgentData?: { brands?: { brand: string }[]; mobile?: boolean };
+    }
+  ).userAgentData;
+
+  const isMobile = uaData?.mobile ?? /Mobile|Android|iPhone|iPad|iPod/i.test(ua);
+
+  let isChromeFamily = false;
+  if (uaData?.brands?.length) {
+    isChromeFamily = uaData.brands.some((brand) =>
+      /chromium|google chrome|microsoft edge|brave/i.test(brand.brand),
+    );
+  } else if (/Edg\/|EdgiOS\/|Chrome\/|Chromium\/|CriOS\//.test(ua) && !/Firefox|FxiOS/.test(ua)) {
+    isChromeFamily = true;
+  }
+
+  return { isChromeFamily, isMobile };
 }
 
 export function useOnboarding({ aiStatus, modelInfo }: UseOnboardingParams) {
   const [hasApi, setHasApi] = useState<boolean | null>(null);
   const [isChromeFamily, setIsChromeFamily] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
     const apiPresent = typeof globalThis !== "undefined" && "LanguageModel" in globalThis;
     setHasApi(apiPresent);
-    setIsChromeFamily(detectChromeFamily());
+    const browser = detectBrowser();
+    setIsChromeFamily(browser.isChromeFamily);
+    setIsMobile(browser.isMobile);
 
     const record = readRecord();
     if (!record) {
@@ -87,6 +108,7 @@ export function useOnboarding({ aiStatus, modelInfo }: UseOnboardingParams) {
     shouldShow,
     hasApi,
     isChromeFamily,
+    isMobile,
     aiStatus,
     modelInfo,
     dismiss,

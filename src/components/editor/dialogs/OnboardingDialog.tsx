@@ -33,6 +33,7 @@ import {
 interface OnboardingDialogProps {
   hasApi: boolean | null;
   isChromeFamily: boolean;
+  isMobile: boolean;
   aiStatus: AiStatus;
   modelInfo: ModelRuntimeInfo;
   aiProgress: number | null;
@@ -55,6 +56,7 @@ const STEPS: ReadonlyArray<{ id: StepId }> = [
 
 type AiStage =
   | "checking"
+  | "mobile-unsupported"
   | "chrome-setup"
   | "non-chrome"
   | "unavailable"
@@ -66,11 +68,15 @@ type AiStage =
 function resolveAiStage({
   hasApi,
   isChromeFamily,
+  isMobile,
   aiStatus,
   modelInfo,
-}: Pick<OnboardingDialogProps, "hasApi" | "isChromeFamily" | "aiStatus" | "modelInfo">): AiStage {
+}: Pick<OnboardingDialogProps, "hasApi" | "isChromeFamily" | "isMobile" | "aiStatus" | "modelInfo">): AiStage {
   if (hasApi === null) return "checking";
-  if (!hasApi) return isChromeFamily ? "chrome-setup" : "non-chrome";
+  if (!hasApi) {
+    if (isMobile) return "mobile-unsupported";
+    return isChromeFamily ? "chrome-setup" : "non-chrome";
+  }
 
   if (aiStatus === "creating" || aiStatus === "downloading") return "downloading";
   if (aiStatus === "checking" || aiStatus === "idle") return "checking";
@@ -143,6 +149,7 @@ export function OnboardingDialog(props: OnboardingDialogProps) {
   const {
     hasApi,
     isChromeFamily,
+    isMobile,
     aiStatus,
     modelInfo,
     aiProgress,
@@ -161,7 +168,7 @@ export function OnboardingDialog(props: OnboardingDialogProps) {
 
   const dialogRef = useDialogFocus(stepId);
   const stepIndex = STEPS.findIndex((step) => step.id === stepId);
-  const aiStage = resolveAiStage({ hasApi, isChromeFamily, aiStatus, modelInfo });
+  const aiStage = resolveAiStage({ hasApi, isChromeFamily, isMobile, aiStatus, modelInfo });
   const platform = useMemo(detectInstallPlatform, []);
 
   const goTo = (id: StepId) => setStepId(id);
@@ -362,6 +369,29 @@ function AiPanel({ stage, aiProgress, refreshing, downloadStarting, onStartDownl
           </Button>
         }
       />
+    );
+  }
+
+  if (stage === "mobile-unsupported") {
+    return (
+      <PanelLayout
+        titleId="onboarding-title"
+        title="On-device AI needs desktop Chrome"
+        body="Chrome's built-in Gemini Nano isn't exposed in mobile browsers yet — including Chrome on iOS and Android. The editor, drafts, and offline cache still work here. Open Draftside on desktop Chrome 138+ to turn on AI features."
+        primary={
+          <Button type="button" size="lg" className="max-[540px]:w-full" onClick={onNext}>
+            Continue
+          </Button>
+        }
+      >
+        <InfoCard title="What still works here">
+          <ul className="m-0 grid gap-1 pl-4 text-muted-foreground">
+            <li>Writing, formatting, and saving drafts</li>
+            <li>Private Vault with passkey encryption</li>
+            <li>Offline access once the app loads</li>
+          </ul>
+        </InfoCard>
+      </PanelLayout>
     );
   }
 
