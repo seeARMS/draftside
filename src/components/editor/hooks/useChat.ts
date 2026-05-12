@@ -92,8 +92,27 @@ export function useChat(options: UseChatOptions) {
       clearEditorGhostCompletion(editor);
       setGhostCompletionText("");
       completionRequestRef.current += 1;
-      editor.commands.setContent(update.text, { contentType: "markdown" });
-      editor.commands.focus("end");
+
+      const docEmpty = editor.state.doc.textContent.trim().length === 0;
+
+      if (update.mode === "append" && !docEmpty) {
+        editor
+          .chain()
+          .focus("end")
+          .insertContent(`\n\n${update.text}`, { contentType: "markdown" })
+          .run();
+      } else if (update.mode === "prepend" && !docEmpty) {
+        editor
+          .chain()
+          .focus("start")
+          .insertContent(`${update.text}\n\n`, { contentType: "markdown" })
+          .run();
+        editor.commands.focus("start");
+      } else {
+        editor.commands.setContent(update.text, { contentType: "markdown" });
+        editor.commands.focus("end");
+      }
+
       scheduleSave(editor);
       return true;
     },

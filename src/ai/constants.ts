@@ -54,8 +54,9 @@ export const CHAT_RESPONSE_CONSTRAINT: Record<string, unknown> = {
           properties: {
             summary: { type: "string" },
             text: { type: "string" },
+            mode: { type: "string", enum: ["replace", "append", "prepend"] },
           },
-          required: ["summary", "text"],
+          required: ["summary", "text", "mode"],
           additionalProperties: false,
         },
       ],

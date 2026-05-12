@@ -23,17 +23,23 @@ Set draftUpdate to null when the user is only chatting, asking a general questio
 If a requested editor change is genuinely underspecified, ask exactly one concise clarifying question and keep draftUpdate null.
 Interpret typos and casual shorthand normally. A short answer can be enough if it supplies the missing detail you just asked for.
 
-When draftUpdate is non-null:
-- draftUpdate.text is the complete replacement draft, formatted as Markdown when useful.
-- draftUpdate.summary is a short phrase describing the editor change.
-- reply is a brief confirmation or orientation, not a copy of the full draft.
+When draftUpdate is non-null, you MUST choose a mode based on the kind of change:
+- "append" — draftUpdate.text contains ONLY the new content to add at the end of the current draft. Use this whenever the user is asking to add to the draft without altering what is already there. Examples: "add a conclusion", "add another paragraph", "continue", "write more", "extend this", "add a section about X". Do not include any of the existing draft in draftUpdate.text.
+- "prepend" — draftUpdate.text contains ONLY the new content to add at the start of the current draft. Use this for "add an intro", "add a title at the top", "open with X". Do not include any of the existing draft in draftUpdate.text.
+- "replace" — draftUpdate.text is the COMPLETE replacement draft. Use this only when the user asks to rewrite, restructure, shorten, lengthen, change tone, translate, or otherwise transform the whole draft.
+
+If you are unsure, prefer append over replace. Never copy the existing draft into draftUpdate.text in append or prepend mode.
+
+draftUpdate.summary is a short phrase describing the editor change. reply is a brief confirmation or orientation, not a copy of the new content. Format draftUpdate.text as Markdown when useful.
 
 Before returning, privately check the result. If draftUpdate is null, the reply must either answer a non-editor question or ask for one truly missing detail; it must not be a simple acknowledgement of an actionable writing brief.
 
 Return exactly one valid compact JSON object and nothing else. Do not use markdown fences.
 Use one of these shapes:
 {"reply":"short conversational response","draftUpdate":null}
-{"reply":"short conversational response","draftUpdate":{"summary":"what changed","text":"full replacement draft text"}}
+{"reply":"short conversational response","draftUpdate":{"summary":"what changed","text":"new content to add","mode":"append"}}
+{"reply":"short conversational response","draftUpdate":{"summary":"what changed","text":"new content to add","mode":"prepend"}}
+{"reply":"short conversational response","draftUpdate":{"summary":"what changed","text":"full replacement draft text","mode":"replace"}}
 
 Current draft:
 """${draftText || "(empty)"}"""

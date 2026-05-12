@@ -1,15 +1,19 @@
-import type { Classification, DraftUpdate, ExpressionOption } from "../lib/types";
+import type { Classification, DraftUpdate, DraftUpdateMode, ExpressionOption } from "../lib/types";
 import { extractJsonArray, extractJsonObject, stripJsonFences } from "../lib/json";
 
 function normalizeDraftUpdate(raw: unknown): DraftUpdate | null {
-  const data = raw && typeof raw === "object" ? (raw as { text?: unknown; markdown?: unknown; summary?: unknown }) : null;
+  const data = raw && typeof raw === "object"
+    ? (raw as { text?: unknown; markdown?: unknown; summary?: unknown; mode?: unknown })
+    : null;
   if (!data) return null;
 
   const text = typeof data.text === "string" ? data.text.trim() : typeof data.markdown === "string" ? data.markdown.trim() : "";
   if (!text) return null;
 
   const summary = typeof data.summary === "string" && data.summary.trim() ? data.summary.trim().slice(0, 120) : "Updated the draft";
-  return { text, summary };
+  const rawMode = typeof data.mode === "string" ? data.mode.trim().toLowerCase() : "";
+  const mode: DraftUpdateMode = rawMode === "append" || rawMode === "prepend" || rawMode === "replace" ? rawMode : "append";
+  return { text, summary, mode };
 }
 
 export function parseChatResponse(input: string): { reply: string; draftUpdate: DraftUpdate | null } {

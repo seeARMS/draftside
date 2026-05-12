@@ -32,9 +32,12 @@ export interface EditorUiPrefs {
   translationTarget?: string;
 }
 
+export type DraftUpdateMode = "replace" | "append" | "prepend";
+
 export interface DraftUpdate {
   text: string;
   summary: string;
+  mode: DraftUpdateMode;
 }
 
 export interface ChatMessage {
