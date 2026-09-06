@@ -45,6 +45,15 @@ npm run dev
 
 The dev server runs at `http://localhost:4321`.
 
+## Browser regression tests
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+The tests run the real editor in Chromium with deterministic responses at the built-in AI API boundary. They exercise ghost text, Tab acceptance, dismissal, and saved draft persistence without requiring a Gemini Nano download. Use `PLAYWRIGHT_BASE_URL` to test an already running development or production build, or `PLAYWRIGHT_PORT` to change the test server port.
+
 ## Production build
 
 ```bash

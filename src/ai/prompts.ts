@@ -1,4 +1,5 @@
 import type { ChatMessage } from "../lib/types";
+import { getCompletionPrefix } from "./text";
 
 function formatChatHistory(history: ChatMessage[]) {
   return history
@@ -68,7 +69,16 @@ Draft:
 }
 
 export function buildCompletionPrompt(before: string) {
-  return `You are an inline autocomplete engine for a private writing editor. Continue only the unfinished sentence at the cursor. Return only the words that should be inserted after the cursor. Do not repeat already-written text. No quotes, markdown, JSON, labels, or commentary. Keep it subtle: 3 to 10 words, at most one short clause.
+  return `You are an inline autocomplete engine for a private writing editor. Continue only the unfinished sentence at the cursor. Return the completed sentence, starting with the exact unchanged prefix below, then add 3 to 10 words, at most one short clause. The cursor can be inside a word: finish that word without inserting a space. If the last word is already complete, separate the next word with a space. Preserve all existing spaces. No surrounding quotes, markdown, JSON, labels, or commentary.
+
+Examples:
+Prefix: "The quick brow"
+Response: The quick brown fox jumps over the lazy dog.
+Prefix: "The quick brown"
+Response: The quick brown fox jumps over the lazy dog.
+
+Required prefix (shown as a JSON string so spaces are visible):
+${JSON.stringify(getCompletionPrefix(before))}
 
 Text before cursor:
 """${before}"""`;
