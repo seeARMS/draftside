@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { AiTab, EditorFont, EditorUiPrefs } from "../../../lib/types";
+import type { AiTab, CompletionLength, EditorFont, EditorUiPrefs } from "../../../lib/types";
 import { readStoredUiPrefs, writeStoredUiPrefs } from "../../../storage/prefs";
 
 interface UiPrefsState {
   aiSidebarOpen: boolean;
   aiTab: AiTab;
   editorFont: EditorFont;
+  completionLength: CompletionLength;
   focusMode: boolean;
   liveAnalysis: boolean;
   translationTarget: string;
@@ -19,6 +20,7 @@ function initialPrefs(): UiPrefsState {
     aiSidebarOpen: stored.aiSidebarOpen ?? isWideViewport,
     aiTab: stored.aiTab ?? "tools",
     editorFont: stored.editorFont ?? "geist",
+    completionLength: stored.completionLength ?? "short",
     focusMode: stored.focusMode ?? false,
     liveAnalysis: stored.liveAnalysis ?? true,
     translationTarget: stored.translationTarget ?? "es",
@@ -30,6 +32,7 @@ const PERSIST_KEYS: ReadonlyArray<keyof EditorUiPrefs> = [
   "aiSidebarOpen",
   "aiTab",
   "editorFont",
+  "completionLength",
   "focusMode",
   "liveAnalysis",
   "translationTarget",

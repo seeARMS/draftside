@@ -1,4 +1,5 @@
-import type { ChatMessage } from "../lib/types";
+import type { ChatMessage, CompletionLength } from "../lib/types";
+import { COMPLETION_LENGTH_CONFIG } from "./completion";
 import { getCompletionPrefix } from "./text";
 
 function formatChatHistory(history: ChatMessage[]) {
@@ -68,8 +69,8 @@ Draft:
 """${text}"""`;
 }
 
-export function buildCompletionPrompt(before: string) {
-  return `You are an inline autocomplete engine for a private writing editor. Continue only the unfinished sentence at the cursor. Return the completed sentence, starting with the exact unchanged prefix below, then add 3 to 10 words, at most one short clause. The cursor can be inside a word: finish that word without inserting a space. If the last word is already complete, separate the next word with a space. Preserve all existing spaces. No surrounding quotes, markdown, JSON, labels, or commentary.
+export function buildCompletionPrompt(before: string, completionLength: CompletionLength = "short") {
+  return `You are an inline autocomplete engine for a private writing editor. ${COMPLETION_LENGTH_CONFIG[completionLength].instruction} Return the continuation, starting with the exact unchanged prefix below. The requested length counts only new words after that prefix. The cursor can be inside a word: finish that word without inserting a space. If the last word is already complete, separate the next word with a space. Preserve all existing spaces. No surrounding quotes, markdown, JSON, labels, or commentary.
 
 Examples:
 Prefix: "The quick brow"

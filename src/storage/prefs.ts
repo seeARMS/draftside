@@ -28,6 +28,10 @@ export function readStoredUiPrefs(): EditorUiPrefs {
       aiTab: parsed.aiTab === "chat" || parsed.aiTab === "tools" ? parsed.aiTab : undefined,
       chatInput: typeof parsed.chatInput === "string" ? parsed.chatInput : undefined,
       editorFont: EDITOR_FONT_VALUES.has(parsed.editorFont as EditorFont) ? (parsed.editorFont as EditorFont) : undefined,
+      completionLength:
+        parsed.completionLength === "short" || parsed.completionLength === "medium" || parsed.completionLength === "long"
+          ? parsed.completionLength
+          : undefined,
       focusMode: typeof parsed.focusMode === "boolean" ? parsed.focusMode : undefined,
       liveAnalysis: typeof parsed.liveAnalysis === "boolean" ? parsed.liveAnalysis : undefined,
       translationTarget:

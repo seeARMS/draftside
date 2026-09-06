@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
+import type { CompletionLength } from "../../../lib/types";
 import {
   cleanGhostCompletion,
   clearEditorGhostCompletion,
@@ -17,6 +18,7 @@ interface UseGhostCompletionOptions {
   vaultLocked: boolean;
   activeSessionId?: string | null;
   completionTick: number;
+  completionLength: CompletionLength;
   createLanguageModelTask: (signal?: AbortSignal) => Promise<LanguageModel>;
 }
 
@@ -29,6 +31,7 @@ export function useGhostCompletion({
   vaultLocked,
   activeSessionId,
   completionTick,
+  completionLength,
   createLanguageModelTask,
 }: UseGhostCompletionOptions) {
   const [ghostCompletionText, setGhostCompletionText] = useState("");
@@ -95,7 +98,7 @@ export function useGhostCompletion({
         if (completionRequestRef.current !== requestId) return;
 
         const result = await model.prompt([
-          { role: "user", content: buildCompletionPrompt(liveContext.before) },
+          { role: "user", content: buildCompletionPrompt(liveContext.before, completionLength) },
         ]);
 
         const currentContext = getCompletionContext(editor);
@@ -109,7 +112,7 @@ export function useGhostCompletion({
           return;
         }
 
-        const completion = cleanGhostCompletion(result, currentContext);
+        const completion = cleanGhostCompletion(result, currentContext, completionLength);
         if (!completion) return;
 
         setEditorGhostCompletion(editor, completion, currentContext.pos);
@@ -128,7 +131,7 @@ export function useGhostCompletion({
       if (completionTimerRef.current) window.clearTimeout(completionTimerRef.current);
       completionRequestRef.current += 1;
     };
-  }, [editor, enabled, expressionTargetActive, postMenuOpen, vaultLocked, selectionEmpty, activeSessionId, completionTick, createLanguageModelTask]);
+  }, [editor, enabled, expressionTargetActive, postMenuOpen, vaultLocked, selectionEmpty, activeSessionId, completionTick, completionLength, createLanguageModelTask]);
 
   return {
     ghostCompletionText,
