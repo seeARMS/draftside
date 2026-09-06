@@ -1,10 +1,11 @@
 import { Extension, type Editor } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import type { CompletionContext, GhostCompletionState } from "../lib/types";
+import type { CompletionContext, CompletionLength, GhostCompletionState } from "../lib/types";
 import { countWords } from "../lib/session";
 import { stripJsonFences } from "../lib/json";
 import { getCompletionPrefix, truncateForModel } from "../ai/text";
+import { COMPLETION_LENGTH_CONFIG } from "../ai/completion";
 
 export const ghostCompletionKey = new PluginKey<GhostCompletionState>("draftsideGhostCompletion");
 
@@ -107,18 +108,20 @@ export function getCompletionContext(editor: Editor): CompletionContext | null {
   };
 }
 
-export function cleanGhostCompletion(input: string, context: CompletionContext) {
+export function cleanGhostCompletion(input: string, context: CompletionContext, completionLength: CompletionLength = "short") {
+  const limits = COMPLETION_LENGTH_CONFIG[completionLength];
   const response = stripJsonFences(input).replace(/\s+/g, " ");
   // The echoed prefix anchors the insertion boundary. Reject a rewritten or
   // missing prefix instead of guessing whether the next token needs a space.
   if (!response.startsWith(context.fragment)) return "";
   let completion = response.slice(context.fragment.length).trimEnd();
 
-  const sentenceEnd = completion.search(/[.!?](?:\s|$)/);
-  if (sentenceEnd >= 0) completion = completion.slice(0, sentenceEnd + 1).trimEnd();
+  const sentenceEnds = Array.from(completion.matchAll(/[.!?](?=\s|$)/g));
+  const sentenceEnd = sentenceEnds[limits.maxSentences - 1]?.index;
+  if (sentenceEnd !== undefined) completion = completion.slice(0, sentenceEnd + 1).trimEnd();
 
   const words = [...completion.matchAll(/\S+/g)];
-  if (words.length > 12) completion = completion.slice(0, words[12].index).trimEnd();
+  if (words.length > limits.maxWords) completion = completion.slice(0, words[limits.maxWords].index).trimEnd();
 
-  return completion.length > 96 ? completion.slice(0, 96).replace(/\s+\S*$/, "") : completion;
+  return completion.length > limits.maxChars ? completion.slice(0, limits.maxChars).replace(/\s+\S*$/, "") : completion;
 }

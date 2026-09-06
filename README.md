@@ -10,7 +10,7 @@ Most AI writing tools send your drafts to a remote backend. Draftside doesn't. E
 
 ## Features
 
-- **Inline ghost-text completions** — pause briefly, press `Tab` to accept
+- **Inline ghost-text completions** — pause briefly, press `Tab` to accept; choose Short, Medium, or Long in **More actions → Completion length**
 - **Alternate wording** — highlight a phrase, click to swap
 - **Rewrite** — shape a passage with the local Rewriter API
 - **Classify** — read your own draft (form, intent, stance, friction, next move)
@@ -52,7 +52,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The tests run the real editor in Chromium with deterministic responses at the built-in AI API boundary. They exercise ghost text, Tab acceptance, dismissal, and saved draft persistence without requiring a Gemini Nano download. Use `PLAYWRIGHT_BASE_URL` to test an already running development or production build, or `PLAYWRIGHT_PORT` to change the test server port.
+The tests run the real editor in Chromium with deterministic responses at the built-in AI API boundary. They exercise ghost text, Tab acceptance, dismissal, saved draft persistence, and completion length preferences without requiring a Gemini Nano download. Use `PLAYWRIGHT_BASE_URL` to test an already running development or production build, or `PLAYWRIGHT_PORT` to change the test server port.
 
 ## Production build
 

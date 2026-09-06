@@ -4,6 +4,7 @@ export type SaveState = "idle" | "saving" | "saved" | "error";
 export type AiStatus = Availability | "idle" | "checking" | "creating" | "unsupported" | "error";
 export type AiAction = "rewrite" | "chat" | "transcribe" | "translate" | null;
 export type AiTab = "chat" | "tools";
+export type CompletionLength = "short" | "medium" | "long";
 export type AmbientStatus = "off" | "idle" | "tentative" | "stale" | "thinking" | "ready" | "error";
 export type ThemeMode = "light" | "dark";
 export type ChatRole = "user" | "assistant";
@@ -27,6 +28,7 @@ export interface EditorUiPrefs {
   aiTab?: AiTab;
   chatInput?: string;
   editorFont?: EditorFont;
+  completionLength?: CompletionLength;
   focusMode?: boolean;
   liveAnalysis?: boolean;
   translationTarget?: string;

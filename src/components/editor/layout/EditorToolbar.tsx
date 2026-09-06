@@ -24,6 +24,7 @@ import {
   PanelRightOpen,
   Quote,
   Redo2,
+  Sparkles,
   Sun,
   Trash2,
   Type,
@@ -32,7 +33,8 @@ import {
 } from "lucide-react";
 import type { RefObject } from "react";
 import type { Editor } from "@tiptap/core";
-import type { AiAction, Capabilities, EditorFont, RecordingTarget, ThemeMode, VaultStatus, WriteSession } from "../../../lib/types";
+import type { AiAction, Capabilities, CompletionLength, EditorFont, RecordingTarget, ThemeMode, VaultStatus, WriteSession } from "../../../lib/types";
+import { COMPLETION_LENGTH_OPTIONS } from "../../../ai/completion";
 import { cn } from "../../../lib/utils";
 import { iconButton } from "../tailwind";
 import { ToolbarButton } from "./ToolbarButton";
@@ -54,6 +56,8 @@ interface EditorToolbarProps {
   toggleFocusMode: () => void;
   editorFont: EditorFont;
   setEditorFont: (font: EditorFont) => void;
+  completionLength: CompletionLength;
+  setCompletionLength: (length: CompletionLength) => void;
   aiSidebarOpen: boolean;
   toggleAiSidebar: () => void;
   postMenuOpen: boolean;
@@ -87,6 +91,8 @@ export function EditorToolbar(props: EditorToolbarProps) {
     toggleFocusMode,
     editorFont,
     setEditorFont,
+    completionLength,
+    setCompletionLength,
     aiSidebarOpen,
     toggleAiSidebar,
     postMenuOpen,
@@ -190,6 +196,8 @@ export function EditorToolbar(props: EditorToolbarProps) {
           </button>
           {postMenuOpen ? (
             <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 grid w-max min-w-[14rem] max-w-[calc(100vw-1rem)] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)]" role="menu" aria-label="More actions">
+              <CompletionLengthPicker completionLength={completionLength} setCompletionLength={setCompletionLength} />
+              <div className="my-1 h-px bg-border/70" role="separator" />
               <div className="px-2 pb-1 pt-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground" role="presentation">
                 Appearance
               </div>
@@ -247,6 +255,60 @@ export function EditorToolbar(props: EditorToolbarProps) {
         >
           {aiSidebarOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function CompletionLengthPicker({
+  completionLength,
+  setCompletionLength,
+}: {
+  completionLength: CompletionLength;
+  setCompletionLength: (length: CompletionLength) => void;
+}) {
+  const current = COMPLETION_LENGTH_OPTIONS.find((option) => option.value === completionLength)!;
+
+  return (
+    <div className="group/completion relative">
+      <button
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        className="flex min-h-9 w-full items-center justify-between gap-3 rounded-md border-0 bg-transparent p-2 text-left text-sm font-medium leading-5 text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+      >
+        <span className="inline-flex items-center gap-2.5">
+          <Sparkles size={16} />
+          Completion length
+        </span>
+        <span className="text-[0.8125rem] font-normal text-muted-foreground">{current.label}</span>
+      </button>
+      <div
+        className="pointer-events-none invisible absolute right-full top-0 z-[60] -mt-2 mr-1 grid min-w-[12rem] gap-0.5 rounded-xl bg-popover p-2 text-popover-foreground opacity-0 shadow-[inset_0_0_0_1px_hsl(var(--border)),0_18px_46px_hsl(var(--shadow-color)/0.12)] transition-opacity duration-100 group-hover/completion:pointer-events-auto group-hover/completion:visible group-hover/completion:opacity-100 group-focus-within/completion:pointer-events-auto group-focus-within/completion:visible group-focus-within/completion:opacity-100 max-[640px]:right-auto max-[640px]:left-0 max-[640px]:top-full max-[640px]:mt-1 max-[640px]:mr-0"
+        role="menu"
+        aria-label="Completion length"
+      >
+        {COMPLETION_LENGTH_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="menuitemradio"
+            aria-checked={option.value === completionLength}
+            onClick={() => setCompletionLength(option.value)}
+            className={cn(
+              "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2.5 rounded-md border-0 bg-transparent p-2 text-left text-sm leading-5 text-foreground transition-colors hover:bg-muted focus-visible:bg-muted",
+              option.value === completionLength && "bg-muted",
+            )}
+          >
+            <span className="inline-flex size-4 items-center justify-center" aria-hidden="true">
+              {option.value === completionLength ? <Check size={14} /> : null}
+            </span>
+            <span className="grid gap-0.5">
+              <span className="font-medium">{option.label}</span>
+              <span className="text-xs text-muted-foreground">{option.description}</span>
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );

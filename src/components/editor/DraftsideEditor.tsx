@@ -333,6 +333,7 @@ export default function DraftsideEditor() {
     vaultLocked,
     activeSessionId: activeSession?.id,
     completionTick,
+    completionLength: prefs.completionLength,
     createLanguageModelTask,
   });
 
@@ -607,6 +608,16 @@ export default function DraftsideEditor() {
     [setPrefs],
   );
 
+  const setCompletionLength = useCallback(
+    (completionLength: typeof prefs.completionLength) => {
+      setPrefs((current) => ({ ...current, completionLength }));
+      setPostMenuOpen(false);
+      // Focus synchronously so the completion effect sees the editor ready for the new length.
+      editor?.view.focus();
+    },
+    [editor, setPrefs],
+  );
+
   const swapTranslation = useCallback(() => {
     const source = aiTools.translationSource;
     if (!source || source === prefs.translationTarget) return;
@@ -754,6 +765,8 @@ export default function DraftsideEditor() {
           toggleFocusMode={toggleFocusMode}
           editorFont={prefs.editorFont}
           setEditorFont={setEditorFont}
+          completionLength={prefs.completionLength}
+          setCompletionLength={setCompletionLength}
           aiSidebarOpen={prefs.aiSidebarOpen}
           toggleAiSidebar={toggleAiSidebar}
           onOpenDrafts={() => setDraftsDrawerOpen(true)}
