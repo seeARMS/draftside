@@ -13,8 +13,8 @@ interface CompletionTestState {
   destroyedCompletions: number;
 }
 
-async function prepareEditor(page: Page, storedLength?: string, deferResponses = false) {
-  await page.addInitScript(({ responses, storedLength, deferResponses }) => {
+async function prepareEditor(page: Page, storedLength?: string, deferResponses = false, completionStart = " ") {
+  await page.addInitScript(({ responses, storedLength, deferResponses, completionStart }) => {
     const browser = window as typeof window & CompletionTestState;
     browser.completionPrompts = [];
     browser.resolveCompletion = {};
@@ -39,11 +39,11 @@ async function prepareEditor(page: Page, storedLength?: string, deferResponses =
           await new Promise<void>((resolve) => { browser.resolveCompletion[length] = resolve; });
         }
         const prefix = prompt.split("<prefix>")[1].split("</prefix>")[0];
-        return `${prefix} ${responses[length]}`;
+        return `${prefix}${completionStart}${responses[length]}`;
       }
     }
     Object.defineProperty(window, "LanguageModel", { configurable: true, value: TestLanguageModel });
-  }, { responses: RESPONSES, storedLength, deferResponses });
+  }, { responses: RESPONSES, storedLength, deferResponses, completionStart });
 
   await page.goto("/write");
   await expect(page.locator(".tiptap[contenteditable=true]")).toBeVisible();
@@ -65,7 +65,7 @@ async function acceptCompletion(page: Page, response: string, instruction: strin
   expect(prompts.at(-1)).toContain(instruction);
   await editor.press("Tab");
   await expect(ghost).toHaveCount(0);
-  await expect(editor).toHaveText(`${PREFIX} ${response}`);
+  await expect.poll(() => editor.textContent()).toBe(`${PREFIX} ${response}`);
 }
 
 test("short remains the default and accepts its suggestion", async ({ page }) => {
@@ -103,6 +103,16 @@ test("invalid stored completion length falls back to short", async ({ page }) =>
   await expect(page.getByRole("menuitemradio", { name: "Short 3–10 words" })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "More actions", exact: true }).click();
   await acceptCompletion(page, RESPONSES.short, "3 to 10 words");
+});
+
+test("long completion finishes a partial word and preserves the full paragraph", async ({ page }) => {
+  await prepareEditor(page, "long", false, "ts ");
+  const editor = page.locator(".tiptap[contenteditable=true]");
+  await editor.fill("On weekends our neighborhood mee");
+  await editor.press("End");
+  await expect(editor.locator(".ProseMirror-widget")).toHaveText(`ts ${RESPONSES.long}`);
+  await editor.press("Tab");
+  await expect.poll(() => editor.textContent()).toBe(`${PREFIX} ${RESPONSES.long}`);
 });
 
 test("changing length discards a completion still being generated", async ({ page }) => {
