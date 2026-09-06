@@ -77,8 +77,8 @@ Response: The quick brown fox jumps over the lazy dog.
 Prefix: "The quick brown"
 Response: The quick brown fox jumps over the lazy dog.
 
-Required prefix (shown as a JSON string so spaces are visible):
-${JSON.stringify(getCompletionPrefix(before))}
+Required prefix: copy the text between the markers exactly, including spaces, then continue it. Do not include the markers or add quotation marks around the prefix.
+<prefix>${getCompletionPrefix(before)}</prefix>
 
 Text before cursor:
 """${before}"""`;
