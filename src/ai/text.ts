@@ -1,5 +1,10 @@
 import { MAX_MODEL_CHARS } from "./constants";
 
+export function getCompletionPrefix(before: string) {
+  // Keep cursor whitespace: it distinguishes a finished word from a partial one.
+  return before.split(/(?<=[.!?])\s+/u).pop()?.trimStart() ?? before;
+}
+
 export function truncateForModel(text: string, limit = MAX_MODEL_CHARS) {
   if (text.length <= limit) return text;
   return `${text.slice(0, Math.floor(limit * 0.55))}\n\n[...]\n\n${text.slice(-Math.floor(limit * 0.4))}`;

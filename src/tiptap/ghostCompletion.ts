@@ -4,7 +4,7 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { CompletionContext, GhostCompletionState } from "../lib/types";
 import { countWords } from "../lib/session";
 import { stripJsonFences } from "../lib/json";
-import { truncateForModel } from "../ai/text";
+import { getCompletionPrefix, truncateForModel } from "../ai/text";
 
 export const ghostCompletionKey = new PluginKey<GhostCompletionState>("draftsideGhostCompletion");
 
@@ -95,7 +95,7 @@ export function getCompletionContext(editor: Editor): CompletionContext | null {
   if (trimmed.length < 12 || countWords(trimmed) < 3) return null;
   if (/[.!?]$/.test(trimmed)) return null;
 
-  const fragment = trimmed.split(/(?<=[.!?])\s+/u).pop()?.trim() ?? trimmed;
+  const fragment = getCompletionPrefix(compactBefore);
   if (fragment.length < 8 || countWords(fragment) < 2) return null;
   if (/^[\W_]+$/u.test(fragment)) return null;
 
@@ -108,30 +108,17 @@ export function getCompletionContext(editor: Editor): CompletionContext | null {
 }
 
 export function cleanGhostCompletion(input: string, context: CompletionContext) {
-  let completion = stripJsonFences(input)
-    .replace(/^["'“”]+|["'“”]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const response = stripJsonFences(input).replace(/\s+/g, " ");
+  // The echoed prefix anchors the insertion boundary. Reject a rewritten or
+  // missing prefix instead of guessing whether the next token needs a space.
+  if (!response.startsWith(context.fragment)) return "";
+  let completion = response.slice(context.fragment.length).trimEnd();
 
-  if (!completion) return "";
-
-  const fragment = context.fragment.trim();
-  if (completion.toLocaleLowerCase().startsWith(fragment.toLocaleLowerCase())) {
-    completion = completion.slice(fragment.length).trimStart();
-  }
-
-  completion = completion.replace(/^[….\s]+/, "").trim();
   const sentenceEnd = completion.search(/[.!?](?:\s|$)/);
-  if (sentenceEnd > 0) completion = completion.slice(0, sentenceEnd + 1).trim();
+  if (sentenceEnd >= 0) completion = completion.slice(0, sentenceEnd + 1).trimEnd();
 
-  const words = completion.split(/\s+/).filter(Boolean);
-  if (words.length > 12) completion = words.slice(0, 12).join(" ");
-  if (!completion || completion === fragment) return "";
-
-  const previousCharacter = context.fingerprint.trimEnd().slice(-1);
-  if (completion && !/^[,.;:!?)]/.test(completion) && previousCharacter && !/[\s([{/"'“‘-]/.test(previousCharacter)) {
-    completion = ` ${completion}`;
-  }
+  const words = [...completion.matchAll(/\S+/g)];
+  if (words.length > 12) completion = completion.slice(0, words[12].index).trimEnd();
 
   return completion.length > 96 ? completion.slice(0, 96).replace(/\s+\S*$/, "") : completion;
 }

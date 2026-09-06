@@ -39,9 +39,11 @@
     "astro": "astro",
     "generate-types": "wrangler types",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
     "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.2.4",
     "@types/dom-chromium-ai": "^0.0.16",
     "@types/react": "^18.3.28",
