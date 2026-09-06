@@ -38,7 +38,7 @@ async function prepareEditor(page: Page, storedLength?: string, deferResponses =
         if (deferResponses) {
           await new Promise<void>((resolve) => { browser.resolveCompletion[length] = resolve; });
         }
-        const prefix = JSON.parse(prompt.split("Required prefix (shown as a JSON string so spaces are visible):\n")[1].split("\n")[0]) as string;
+        const prefix = prompt.split("<prefix>")[1].split("</prefix>")[0];
         return `${prefix} ${responses[length]}`;
       }
     }
